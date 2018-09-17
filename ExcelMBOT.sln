@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27703.2035
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelMBOTa", "ExcelMBOT\ExcelMBOTa.csproj", "{D7CD9324-9D2F-48CD-9A5B-F2099FA0864E}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Program", "ExcelMBOT\Program.csproj", "{D7CD9324-9D2F-48CD-9A5B-F2099FA0864E}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ClassLibrary1", "ClassLibrary1\ClassLibrary1.csproj", "{7C4E19AD-688A-49C9-A210-302604978FDA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelMBOT", "ClassLibrary1\ExcelMBOT.csproj", "{7C4E19AD-688A-49C9-A210-302604978FDA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
