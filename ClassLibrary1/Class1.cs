@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
 
-namespace ExcelMBOT
+namespace ExcelDataManipulation
 {
     public class ExcelMBOT
     {
@@ -91,6 +91,37 @@ namespace ExcelMBOT
             }
         }
         #endregion
+        #region COPY COLUMN
+        public void CopyColumn(string workbookname, string column)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
+                    range.Copy();
+                }
+            }
+        }
+        #endregion
+        #region COPY ROW
+        public void CopyRow(string workbookname, int row)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
+                    range.Copy();
+                }
+            }
+        }
+        #endregion
+
         #region INSERT FORMULA
         public void InsertFormula(string workbookname, int column, int row, string inputformula)
         {
@@ -428,6 +459,23 @@ namespace ExcelMBOT
             }
         }
         #endregion
+        #region CLEAR SELECTED CELLS
+        public void ClearSelectedCells(string workbookname)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Create object from selection
+                    Excel.Range range = xlapp.ActiveWindow.Selection;
+                    //Delete selected rows
+                    range.ClearContents();
+
+                }
+            }
+        }
+        #endregion
         #region DELETE COLUMNS OF SELECTED CELLS
         public void DeleteColumnsOfSelectedCells(string workbookname)
         {
@@ -440,6 +488,26 @@ namespace ExcelMBOT
                     Excel.Range range = xlapp.ActiveWindow.Selection;
                     //Delete selected rows
                     range.EntireColumn.Delete();
+
+                }
+            }
+        }
+        #endregion
+        #region CLEAR CELLS IN RANGE
+        public void ClearCellsInRange(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Create object from selection
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                    //Delete selected rows
+                    range.ClearContents();
 
                 }
             }
@@ -593,6 +661,48 @@ namespace ExcelMBOT
             return result.Item1;
         }
         #endregion
+        #region GET LAST ROW OF SPECIFIC COLUMN
+        public int GetLastRowOfSpecificColumn(string workbookname, int column, int rowstart)
+        {
+            int rowcount = 0;
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select column
+
+                    while (sheet.Cells[rowstart, column].value != null)
+                    {
+                        ++rowstart;
+                        ++rowcount;
+                    }
+                }
+            }
+            return rowcount;
+        }
+        #endregion
+        #region GET LAST COLUMN OF SPECIFIC ROW
+        public int GetLastColumnOfSpecificRow(string workbookname, int row, int columnstart)
+        {
+            int columncount = 0;
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select column
+
+                    while (sheet.Cells[row, columnstart].value != null)
+                    {
+                        ++columnstart;
+                        ++columncount;
+                    }
+                }
+            }
+            return columncount;
+        }
+        #endregion
 
         #region AUTOFIT COLUMN
         public void AutofitColumn(string workbookname, string column)
@@ -647,6 +757,7 @@ namespace ExcelMBOT
         {
             Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
             List<string> workbooklist = new List<string>();
+            Excel.Workbook wkb = null;
             string wkbname;
             string newworkbook = "Unable to find new workbook name";
 
@@ -655,30 +766,76 @@ namespace ExcelMBOT
             {
                 wkbname = Convert.ToString(activewkbs.Name);
                 workbooklist.Add(wkbname);
-            }
-
-            //Find workbook from input
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
+                if (activewkbs.Name == workbookname)
                 {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Copy sheet
-                    sheet.Copy();
-                    //Obtain name of newly created worksheet
-                    foreach (Excel.Workbook wkb in xlapp.Workbooks)
-                    {
-                        wkbname = Convert.ToString(wkb.Name);
-                        if (workbooklist.Contains(wkbname) == false)
-                        {
-                            newworkbook = wkbname;
-                        }
-                    }
+                    wkb = activewkbs;
                 }
             }
-            return newworkbook;
+
+            if (wkb != null)
+            {
+                Excel.Worksheet sheet = (Excel.Worksheet)wkb.ActiveSheet;
+                //Copy sheet
+                sheet.Copy();
+                //Obtain name of newly created worksheet
+                foreach (Excel.Workbook wkbnew in xlapp.Workbooks)
+                {
+                    wkbname = Convert.ToString(wkbnew.Name);
+                    if (workbooklist.Contains(wkbname) == false)
+                    {
+                        newworkbook = wkbname;
+                    }
+                }
+
+                return newworkbook;
+            }
+            else
+            {
+                return "Wokbook not available";
+            }
+
         }
         #endregion
+        #region COPY SHEET TO SPECIFIC WORKBOOK
+        public string CopySheetToSpecificWorkbook(string workbooknameFROM, string workbooknameTO)
+        {
+            Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
+            List<string> workbooklist = new List<string>();
+            Excel.Workbook wkbFrom = null;
+            Excel.Workbook wkbTo = null;
+            string wkbname;
+
+            foreach (Excel.Workbook activewkbs in xlapp.Workbooks)
+            {
+                wkbname = Convert.ToString(activewkbs.Name);
+                workbooklist.Add(wkbname);
+                if (activewkbs.Name == workbooknameFROM)
+                {
+                    wkbFrom = activewkbs;
+                }
+                else if (activewkbs.Name == workbooknameTO)
+                {
+                    wkbTo = activewkbs;
+                }
+            }
+
+            if (wkbFrom != null && wkbTo != null)
+            {
+                Excel.Worksheet sheet = (Excel.Worksheet)wkbFrom.ActiveSheet;
+
+                sheet.Copy(wkbTo.Worksheets[1]);
+
+                return "Object copied";
+            }
+            else
+            {
+                return "Workbooks not available";
+            }
+
+
+        }
+        #endregion
+
         #endregion
 
 

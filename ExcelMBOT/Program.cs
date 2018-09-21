@@ -5,6 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
+using System.Drawing;
 
 
 
@@ -14,6 +15,7 @@ namespace ConsoleApp1
 {
     public class Program
     {
+        Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
         #region GET: SHEETNAME, COLUMN COUNT, ROW COUNT, CHANGE SHEET NAME, SHEET COUNT
         public Tuple<int, int, string, int> GetSheetName(Excel.Application xlapp, string workbookname, string newsheetname = "")
         {
@@ -371,63 +373,31 @@ namespace ConsoleApp1
         }
         #endregion
 
-        #region COPY SHEET TO NEW WORKBOOK
-        public string CopySheetToNewWorkbook(string workbookname)
+        #region GET LAST ROW OF SPECIFIC COLUMN
+        public int GetLastRowOfSpecificColumn(string workbookname, int column)
         {
-            Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
-            List<string> workbooklist = new List<string>();
-            string wkbname;
-            string newworkbook = "Unable to find new workbook name";
-
-            foreach (Excel.Workbook activewkbs in xlapp.Workbooks)
-            {
-                wkbname = Convert.ToString(activewkbs.Name);
-                workbooklist.Add(wkbname);
-            }
-
+            int rowcount = 1;
             foreach (Excel.Workbook workbook in xlapp.Workbooks)
             {
                 if (workbook.Name == workbookname)
                 {
                     Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Delete sheet
-                    sheet.Copy();
+                    //Select column
 
-
-                    foreach (Excel.Workbook wkb in xlapp.Workbooks)
+                    while (sheet.Cells[rowcount, column].value != null)
                     {
-                        wkbname = Convert.ToString(wkb.Name);
-                        if (workbooklist.Contains(wkbname) == false)
-                        {
-                            newworkbook = wkbname;
-                        }
+                        Console.WriteLine(sheet.Cells[rowcount, column].value);
+                        ++rowcount;
                     }
 
-
                 }
             }
-            return newworkbook;
+
+            return rowcount -1;
         }
         #endregion
 
-        #region CHANGE FONT IN SELECTION TO BOLD
-        public void ChangeFontInSelectionToBold(string workbookname, string columnfrom, int rowfrom, string columnto, int rowto)
-        {
-            Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = sheet.get_Range(columnfrom + rowfrom, columnto + rowto);
-                    range.Font.Bold = true;
 
-
-                }
-            }
-        }
-        #endregion
 
         static void Main(string[] args)
         {
@@ -438,7 +408,7 @@ namespace ConsoleApp1
 
             //sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx");
            // sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx", "A", "C", 7);
-            sheetname.ChangeFontInSelectionToBold("Ctest.xlsx", "A",1,"C",1);
+            int count = sheetname.GetLastRowOfSpecificColumn("Ctest.xlsx", 1);
 
             //Console.WriteLine(result.Item1);
             //Console.WriteLine(result.Item2);
