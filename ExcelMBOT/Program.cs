@@ -373,31 +373,42 @@ namespace ConsoleApp1
         }
         #endregion
 
-        #region GET LAST ROW OF SPECIFIC COLUMN
-        public int GetLastRowOfSpecificColumn(string workbookname, int column)
+        #region FILTER ON VALUE PIVOT IN SELECTED SHEET
+        public string FilterOnValuePivotInSelectedSheet(string workbookname, string pivotname, string[] filtervalues, string filterfield)
         {
-            int rowcount = 1;
+
             foreach (Excel.Workbook workbook in xlapp.Workbooks)
             {
                 if (workbook.Name == workbookname)
                 {
+                    Excel.PivotCaches pCaches = workbook.PivotCaches();
                     Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select column
 
-                    while (sheet.Cells[rowcount, column].value != null)
+                    Excel.PivotTable pivot = (Excel.PivotTable)sheet.PivotTables(pivotname);
+                    Excel.PivotField pivotfield = pivot.PivotFields(filterfield);
+                    pivotfield.ClearAllFilters();
+                    int count = pivot.PivotFields(1).PivotItems.Count;
+                    for (int i = 1; i <= count; i++)
+                    // string nm = pf.PivotItems(i).Name;
                     {
-                        Console.WriteLine(sheet.Cells[rowcount, column].value);
-                        ++rowcount;
-                    }
+                        if (Array.IndexOf(filtervalues, pivotfield.PivotItems(i).Name) > -1)
+                        {
+                            pivotfield.PivotItems(i).visible = true;
+                        }
+                        else
+                        {
+                            pivotfield.PivotItems(i).visible = false;
+                        }
 
+                        //Select cells in a range
+                        //Send range to cache and use it to create pivot
+
+                    }
                 }
             }
-
-            return rowcount -1;
+            return "Pivot creating failed";
         }
         #endregion
-
-
 
         static void Main(string[] args)
         {
@@ -407,9 +418,13 @@ namespace ConsoleApp1
             Program sheetname = new Program();
 
             //sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx");
-           // sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx", "A", "C", 7);
-            int count = sheetname.GetLastRowOfSpecificColumn("Ctest.xlsx", 1);
-
+            // sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx", "A", "C", 7);
+            string[] rowlist = { "Question", "Answer", "Test" };
+            string[] columnlist = { "ColumnTest1"};
+            string[] valuefieldlist = { "ColumnTest2"};
+            string[] filterfieldlist = {"1","3" };
+            string result = sheetname.FilterPivotInSelectedSheet("Ctest.xlsx", "pivot1", filterfieldlist, "ColumnTest3");
+            Console.WriteLine(result);
             //Console.WriteLine(result.Item1);
             //Console.WriteLine(result.Item2);
             //Console.WriteLine(result.Item3);
@@ -417,6 +432,6 @@ namespace ConsoleApp1
             //Console.WriteLine(workbookname);
 
 
-        }
+            }
     }
 }

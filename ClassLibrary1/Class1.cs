@@ -121,6 +121,76 @@ namespace ExcelDataManipulation
             }
         }
         #endregion
+        #region COPY AND PASTE VALUES OFCOLUMN
+        public void CopyAndPasteValuesOfColumn(string workbookname, string columnfrom, string columnto)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range rangefrom = (Excel.Range)sheet.Columns[columnfrom + ":" + columnfrom];
+                    rangefrom.Copy();
+                    Excel.Range rangeto = (Excel.Range)sheet.Columns[columnto + ":" + columnto];
+                    rangeto.PasteSpecial(Excel.XlPasteType.xlPasteValues);
+
+                }
+            }
+        }
+        #endregion
+        #region COPY AND PASTE VALUES OF ROW
+        public void CopyAndPasteValuesOfRow(string workbookname, int rowfrom, int rowto)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range rangefrom = (Excel.Range)sheet.Rows[rowfrom + ":" + rowfrom];
+                    rangefrom.Copy();
+                    Excel.Range rangeto = (Excel.Range)sheet.Rows[rowto + ":" + rowto];
+                    rangeto.PasteSpecial(Excel.XlPasteType.xlPasteValues);
+                }
+            }
+        }
+        #endregion
+        #region COPY AND PASTE COLUMN
+        public void CopyAndPasteColumn(string workbookname, string columnfrom, string columnto)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range rangefrom = (Excel.Range)sheet.Columns[columnfrom + ":" + columnfrom];
+                    rangefrom.Copy();
+                    Excel.Range rangeto = (Excel.Range)sheet.Columns[columnto + ":" + columnto];
+                    rangeto.PasteSpecial();
+
+                }
+            }
+        }
+        #endregion
+        #region COPY AND PASTE ROW
+        public void CopyAndPasteRow(string workbookname, int rowfrom, int rowto)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range rangefrom = (Excel.Range)sheet.Rows[rowfrom + ":" + rowfrom];
+                    rangefrom.Copy();
+                    Excel.Range rangeto = (Excel.Range)sheet.Rows[rowto + ":" + rowto];
+                    rangeto.PasteSpecial();
+                }
+            }
+        }
+        #endregion
 
         #region INSERT FORMULA
         public void InsertFormula(string workbookname, int column, int row, string inputformula)
@@ -233,6 +303,37 @@ namespace ExcelDataManipulation
                     Excel.Range range = sheet.Cells[row, column];
                     //Enter forumla
                     range.PasteSpecial(Excel.XlPasteType.xlPasteValues);
+                }
+            }
+        }
+        #endregion
+        #region PASTE IN SELECTION
+        public void PasteInSelection(string workbookname, string oldstring, string newstring)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range range = xlapp.ActiveWindow.Selection;
+                    range.PasteSpecial();
+                }
+            }
+        }
+        #endregion
+        #region PASTE IN CELL
+        public void PasteInCell(string workbookname, int column, int row, string inputformula)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cell
+                    Excel.Range range = sheet.Cells[row, column];
+                    //Enter forumla
+                    range.PasteSpecial();
                 }
             }
         }
@@ -835,6 +936,128 @@ namespace ExcelDataManipulation
 
         }
         #endregion
+
+        #region CREATE PIVOT IN NEW TAB
+        public string CreatePivotTableInNewTab(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string newsheetname, string pivotname, string pivotcelldesticnation, string[] rowfieldlist, string[] columnfieldlist, string[] valuefieldlist, string[] filterfieldlist)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.PivotCaches pCaches = workbook.PivotCaches();
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    Excel.Worksheet sheet2 = workbook.Worksheets.Add();
+                    sheet2.Name = newsheetname;
+                    //Select cells in a range
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                    Excel.Range rngDes = sheet2.get_Range(pivotcelldesticnation);
+                    //Send range to cache and use it to create pivot
+                    Excel.PivotCache cache = pCaches.Create(Excel.XlPivotTableSourceType.xlDatabase, range, Excel.XlPivotTableVersionList.xlPivotTableVersion14);
+                    Excel.PivotTable pTable = cache.CreatePivotTable(TableDestination: rngDes, TableName: pivotname, DefaultVersion: Excel.XlPivotTableVersionList.xlPivotTableVersion14);
+
+
+                    foreach (var rowfield in rowfieldlist)
+                    {
+                        pTable.PivotFields(rowfield).Orientation = Excel.XlPivotFieldOrientation.xlRowField;
+                    }
+
+                    foreach (var columnfield in columnfieldlist)
+                    {
+                        pTable.PivotFields(columnfield).Orientation = Excel.XlPivotFieldOrientation.xlColumnField;
+                    }
+                    foreach (var valuefield in valuefieldlist)
+                    {
+                        pTable.PivotFields(valuefield).Orientation = Excel.XlPivotFieldOrientation.xlDataField;
+                    }
+                    foreach (var filterfield in filterfieldlist)
+                    {
+                        pTable.PivotFields(filterfield).Orientation = Excel.XlPivotFieldOrientation.xlPageField;
+                    }
+
+                    return pTable.Name + " created";
+                }
+            }
+            return "Pivot creatin failed";
+        }
+        #endregion
+        #region FILTER ON VALUE PIVOT IN SELECTED SHEET
+        public string FilterOnValuePivotInSelectedSheet(string workbookname, string pivotname, string[] filtervalues, string filterfield)
+        {
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.PivotCaches pCaches = workbook.PivotCaches();
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
+                    Excel.PivotTable pivot = (Excel.PivotTable)sheet.PivotTables(pivotname);
+                    Excel.PivotField pivotfield = pivot.PivotFields(filterfield);
+                    pivotfield.ClearAllFilters();
+                    int count = pivot.PivotFields(1).PivotItems.Count;
+                    for (int i = 1; i <= count; i++)
+                    // string nm = pf.PivotItems(i).Name;
+                    {
+                        if (Array.IndexOf(filtervalues, pivotfield.PivotItems(i).Name) > -1)
+                        {
+                            pivotfield.PivotItems(i).visible = true;
+                        }
+                        else
+                        {
+                            pivotfield.PivotItems(i).visible = false;
+                        }
+
+                        //Select cells in a range
+                        //Send range to cache and use it to create pivot
+
+                        return "Completed";
+                    }
+                }
+            }
+            return "Failed";
+        }
+        #endregion
+        #region FILTER OUT VALUE PIVOT IN SELECTED SHEET
+        public string FilterOutValuePivotInSelectedSheet(string workbookname, string pivotname, string[] filtervalues, string filterfield)
+        {
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.PivotCaches pCaches = workbook.PivotCaches();
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
+                    Excel.PivotTable pivot = (Excel.PivotTable)sheet.PivotTables(pivotname);
+                    Excel.PivotField pivotfield = pivot.PivotFields(filterfield);
+                    pivotfield.ClearAllFilters();
+                    int count = pivot.PivotFields(1).PivotItems.Count;
+                    for (int i = 1; i <= count; i++)
+                    // string nm = pf.PivotItems(i).Name;
+                    {
+                        if (Array.IndexOf(filtervalues, pivotfield.PivotItems(i).Name) > -1)
+                        {
+                            pivotfield.PivotItems(i).visible = false;
+                        }
+                        else
+                        {
+                            pivotfield.PivotItems(i).visible = true;
+                        }
+
+                        //Select cells in a range
+                        //Send range to cache and use it to create pivot
+
+                        return "Completed";
+                    }
+                }
+            }
+            return "Failed";
+        }
+        #endregion
+
 
         #endregion
 
