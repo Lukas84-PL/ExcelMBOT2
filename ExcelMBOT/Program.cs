@@ -5,10 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
+using System.Reflection;
+using System.Windows;
 using System.Drawing;
-
-
-
+using Microsoft.Office.Interop.Excel;
 
 
 namespace ConsoleApp1
@@ -373,42 +373,142 @@ namespace ConsoleApp1
         }
         #endregion
 
-        #region FILTER ON VALUE PIVOT IN SELECTED SHEET
-        public string FilterOnValuePivotInSelectedSheet(string workbookname, string pivotname, string[] filtervalues, string filterfield)
+        #region DRAG FORMULA
+        public void DragFromula(string workbookname)
         {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Create object from selection
+                    string formula = sheet.Cells[7][2].Formula;
+                    sheet.Cells[7][3].Formula = xlapp.ConvertFormula(formula, Excel.XlReferenceStyle.xlA1, Excel.XlReferenceStyle.xlR1C1, Excel.XlReferenceType.xlRelative, sheet.Cells[7][2]);
+
+                    Excel.Range oRng = sheet.get_Range("H2").get_Resize(100, 1);
+                    oRng = xlapp.ConvertFormula(formula, Excel.XlReferenceStyle.xlA1, Excel.XlReferenceStyle.xlR1C1, Excel.XlReferenceType.xlRelative, sheet.Cells[7][2]);
+                    //range.Formula = "IF(AND(A" + 1 + "<> 0,B" + 1 + "<>2),\"YES\",\"NO\")";
+
+                    //Delete selected rows
+                    //range.ClearContents();
+
+                }
+            }
+        }
+        #endregion
+
+        #region APPLY FILTER
+        public void ApplyFilter(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, int filtercolumn,string[] filterlist)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
             foreach (Excel.Workbook workbook in xlapp.Workbooks)
             {
                 if (workbook.Name == workbookname)
                 {
-                    Excel.PivotCaches pCaches = workbook.PivotCaches();
                     Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                    //range.AutoFilter(3, "e");
 
-                    Excel.PivotTable pivot = (Excel.PivotTable)sheet.PivotTables(pivotname);
-                    Excel.PivotField pivotfield = pivot.PivotFields(filterfield);
-                    pivotfield.ClearAllFilters();
-                    int count = pivot.PivotFields(1).PivotItems.Count;
-                    for (int i = 1; i <= count; i++)
-                    // string nm = pf.PivotItems(i).Name;
+                    foreach (var item in filterlist)
                     {
-                        if (Array.IndexOf(filtervalues, pivotfield.PivotItems(i).Name) > -1)
-                        {
-                            pivotfield.PivotItems(i).visible = true;
-                        }
-                        else
-                        {
-                            pivotfield.PivotItems(i).visible = false;
-                        }
-
-                        //Select cells in a range
-                        //Send range to cache and use it to create pivot
-
+                        range.AutoFilter(filtercolumn, "<>" + item,
+                        Excel.XlAutoFilterOperator.xlFilterValues, Type.Missing, true);
+                        
                     }
+
+
                 }
             }
-            return "Pivot creating failed";
         }
         #endregion
+
+        #region SET TEXT TO COLUMNS OF RANGE
+        public void TextToColumns(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string delimiter)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+
+                    Excel.Range MyRange = sheet.get_Range(rngFrom, rngTo);
+
+                    MyRange.TextToColumns(MyRange,
+                    XlTextParsingType.xlDelimited,
+                    XlTextQualifier.xlTextQualifierDoubleQuote,
+                    true,        // Consecutive Delimiter
+                    true,// Tab
+                    Type.Missing,// Semicolon
+                    false,        // Comma
+                    false,       // Space
+                    true,// Other
+                    delimiter,         // Other Char
+                    Type.Missing,// Field Info
+                    Type.Missing,// Decimal Separator
+                    Type.Missing,// Thousands Separator
+                    true);// Trailing Minus Numbers
+
+                }
+            }
+        }
+        #endregion
+        #region CHANGE FORMAT OF RANGE
+        public void ChangeFormatOfRange(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string format)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+
+                if (workbook.Name == workbookname)
+                {
+                    if (format == "@")
+                    {
+                        Array fieldInfoArray = new int[,] { { 1, 2 } };
+                        Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                        //Select cells in a range
+
+                        Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                        range.NumberFormat = format;
+                        range.TextToColumns(range,
+                        XlTextParsingType.xlDelimited,
+                        XlTextQualifier.xlTextQualifierDoubleQuote,
+                        true,        // Consecutive Delimiter
+                        Type.Missing,// Tab
+                        Type.Missing,// Semicolon
+                        false,        // Comma
+                        false,       // Space
+                        true,// Other
+                        "",         // Other Char
+                        fieldInfoArray,// Field Info
+                        Type.Missing,// Decimal Separator
+                        Type.Missing,// Thousands Separator
+                        Type.Missing);// Trailing Minus Numbers
+                    }
+                    else
+                    {
+                        Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                        //Select cells in a range
+
+                        Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                        range.TextToColumns();
+                        range.NumberFormat = format;
+                        range.TextToColumns();
+                    }
+
+                }
+            }
+        }
+        #endregion
+
 
         static void Main(string[] args)
         {
@@ -417,14 +517,15 @@ namespace ConsoleApp1
 
             Program sheetname = new Program();
 
+            //List<string> list = new List<string> { "e", "f" };
             //sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx");
             // sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx", "A", "C", 7);
-            string[] rowlist = { "Question", "Answer", "Test" };
-            string[] columnlist = { "ColumnTest1"};
-            string[] valuefieldlist = { "ColumnTest2"};
-            string[] filterfieldlist = {"1","3" };
-            string result = sheetname.FilterPivotInSelectedSheet("Ctest.xlsx", "pivot1", filterfieldlist, "ColumnTest3");
-            Console.WriteLine(result);
+            //string[] rowlist = { "Question", "Answer", "Test" };
+            //string[] columnlist = { "ColumnTest1"};
+            //string[] valuefieldlist = { "ColumnTest2"};
+            string[] filterfieldlist = {"e", "f"  };
+            sheetname.ChangeFormatOfRange("Ctest.xlsx",1,1,1,5,"0");
+            //Console.WriteLine(result);
             //Console.WriteLine(result.Item1);
             //Console.WriteLine(result.Item2);
             //Console.WriteLine(result.Item3);

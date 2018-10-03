@@ -5,6 +5,10 @@ using System.Text;
 using System.Threading.Tasks;
 using Excel = Microsoft.Office.Interop.Excel;
 using System.Runtime.InteropServices;
+using System.Reflection;
+using System.Windows;
+using System.Drawing;
+using Microsoft.Office.Interop.Excel;
 
 namespace ExcelDataManipulation
 {
@@ -1058,6 +1062,149 @@ namespace ExcelDataManipulation
         }
         #endregion
 
+        #region APPLY FILTER
+        public void ApplyFilter(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, int filtercolumn, string[] filterlist)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                    range.AutoFilter(filtercolumn, filterlist,
+                                     Excel.XlAutoFilterOperator.xlFilterValues, Type.Missing, true);
+                }
+            }
+        }
+        #endregion
+        #region CHANGE RANGE FONT COLOR USING HTML
+        public void ChangeRangeFontColor(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string color)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+
+                    range.Font.Color = System.Drawing.ColorTranslator.FromHtml(color);
+
+                }
+            }
+        }
+        #endregion
+        #region CHANGE RANGE FILL COLOR USING HTML
+        public void ChangeRangeFillColorHTML(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string color)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+
+                    range.Interior.Color = System.Drawing.ColorTranslator.FromHtml(color);
+
+                }
+            }
+        }
+        #endregion
+        #region SET TEXT TO COLUMNS OF RANGE
+        public void TextToColumns(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string delimiter)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+
+                    Excel.Range MyRange = sheet.get_Range(rngFrom, rngTo);
+
+                    MyRange.TextToColumns(MyRange,
+                    XlTextParsingType.xlDelimited,
+                    XlTextQualifier.xlTextQualifierDoubleQuote,
+                    true,        // Consecutive Delimiter
+                    Type.Missing,// Tab
+                    Type.Missing,// Semicolon
+                    false,        // Comma
+                    false,       // Space
+                    true,// Other
+                    delimiter,         // Other Char
+                    Type.Missing,// Field Info
+                    Type.Missing,// Decimal Separator
+                    Type.Missing,// Thousands Separator
+                    Type.Missing);// Trailing Minus Numbers
+
+                }
+            }
+        }
+        #endregion
+        #region CHANGE FORMAT OF RANGE
+        public void ChangeFormatOfRange(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string format)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                
+                if (workbook.Name == workbookname)
+                {
+                    if (format == "@")
+                    {
+                        Array fieldInfoArray = new int[,] { { 1, 2 } };
+                        Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                        //Select cells in a range
+
+                        Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                        range.NumberFormat = format;
+                        range.TextToColumns(range,
+                        XlTextParsingType.xlDelimited,
+                        XlTextQualifier.xlTextQualifierDoubleQuote,
+                        true,        // Consecutive Delimiter
+                        Type.Missing,// Tab
+                        Type.Missing,// Semicolon
+                        false,        // Comma
+                        false,       // Space
+                        false,// Other
+                        "",         // Other Char
+                        fieldInfoArray,// Field Info
+                        Type.Missing,// Decimal Separator
+                        Type.Missing,// Thousands Separator
+                        Type.Missing);// Trailing Minus Numbers
+                    }
+                    else
+                    {
+                        Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                        //Select cells in a range
+
+                        Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                        range.TextToColumns();
+                        range.NumberFormat = format;
+                        range.TextToColumns();
+                    }
+
+                }
+            }
+        }
+        #endregion
 
         #endregion
 
