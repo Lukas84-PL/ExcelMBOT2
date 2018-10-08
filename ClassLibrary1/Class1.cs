@@ -9,6 +9,7 @@ using System.Reflection;
 using System.Windows;
 using System.Drawing;
 using Microsoft.Office.Interop.Excel;
+using System.Collections;
 
 namespace ExcelDataManipulation
 {
@@ -1203,6 +1204,110 @@ namespace ExcelDataManipulation
 
                 }
             }
+        }
+        #endregion
+        #region SELECT VISIBLE CELLS IN RANGE
+        public void SelectVisibleCellsInRange(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                    range.SpecialCells(XlCellType.xlCellTypeVisible).Select();
+                }
+            }
+        }
+        #endregion
+        #region SORT RANGE
+        public void SortRange(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, int sortcolumnnumber)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+            Excel.Range rngsortFrom = xlapp.Cells[rowfrom, sortcolumnnumber];
+            Excel.Range rngsortTo = xlapp.Cells[rowto, sortcolumnnumber];
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                    Excel.Range range2 = sheet.get_Range(rngsortFrom, rngsortTo);
+                    range.Sort(range2,
+                                XlSortOrder.xlAscending,
+                                Type.Missing, Type.Missing,
+                                XlSortOrder.xlAscending,
+                                Type.Missing,
+                                XlSortOrder.xlAscending,
+                                XlYesNoGuess.xlYes,
+                                Type.Missing,
+                                Type.Missing,
+                                XlSortOrientation.xlSortColumns,
+                                XlSortMethod.xlPinYin,
+                                XlSortDataOption.xlSortNormal,
+                                XlSortDataOption.xlSortNormal,
+                                XlSortDataOption.xlSortNormal);
+
+
+                }
+            }
+        }
+        #endregion
+        #region GET EXCEL RANGE TO ARRAY
+        public Array GetExcelRangeToArray(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto)
+        {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+            string[,] result = null;
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+
+
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cells in a range
+
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+
+                    object[,] value = range.Value; //the value 
+
+                    int rank = ((Array)value).Rank;
+                    if (rank == 2)
+                    {
+                        int columnCount = columnto - (columnfrom - 1);
+                        int rowCount = rowto - (rowfrom - 1);
+                        result = new string[rowCount, columnCount];
+
+                        for (int i = 1; (i - 1) < rowCount; i++)
+                        {
+                            for (int j = 1; (j - 1) < columnCount; j++)
+                            {
+                                if (value.GetValue(i, j) != null)
+                                {
+                                    result[i - 1, j - 1] = ((Array)value).GetValue(i, j).ToString();
+                                }
+                                else
+                                {
+                                    result[i - 1, j - 1] = "";
+                                }
+
+                            }
+                        }
+                    }
+                    return result;
+                }
+            }
+            return result;
         }
         #endregion
 

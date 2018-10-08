@@ -9,7 +9,13 @@ using System.Reflection;
 using System.Windows;
 using System.Drawing;
 using Microsoft.Office.Interop.Excel;
+using System.Collections;
+using System.Data.Linq;
+using System.Xml;
+using System.Xml.Linq;
 
+using System.Data;
+using System.Text.RegularExpressions;
 
 namespace ConsoleApp1
 {
@@ -425,88 +431,127 @@ namespace ConsoleApp1
         }
         #endregion
 
-        #region SET TEXT TO COLUMNS OF RANGE
-        public void TextToColumns(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string delimiter)
+        #region GET EXCEL RANGE TO ARRAY
+        public Array GetExcelRangeToArray(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto)
         {
             Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
             Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+            string[,] result = null;
 
             foreach (Excel.Workbook workbook in xlapp.Workbooks)
             {
+
+                //ArrayList arrForValues = new ArrayList();
                 if (workbook.Name == workbookname)
                 {
                     Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                     //Select cells in a range
 
-                    Excel.Range MyRange = sheet.get_Range(rngFrom, rngTo);
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
 
-                    MyRange.TextToColumns(MyRange,
-                    XlTextParsingType.xlDelimited,
-                    XlTextQualifier.xlTextQualifierDoubleQuote,
-                    true,        // Consecutive Delimiter
-                    true,// Tab
-                    Type.Missing,// Semicolon
-                    false,        // Comma
-                    false,       // Space
-                    true,// Other
-                    delimiter,         // Other Char
-                    Type.Missing,// Field Info
-                    Type.Missing,// Decimal Separator
-                    Type.Missing,// Thousands Separator
-                    true);// Trailing Minus Numbers
+                    object[,] value = range.Value; //the value 
+
+
+                    //ArrayList[,] arr = new ArrayList[,](value);
+
+                    int rank = ((Array)value).Rank;
+                    if (rank == 2)
+                    {
+                        int columnCount = columnto - (columnfrom - 1);
+                        int rowCount = rowto - (rowfrom - 1);
+                        result = new string[rowCount, columnCount];
+
+                        for (int i = 1; (i - 1) < rowCount; i++)
+                        {
+                            for (int j = 1; (j - 1) < columnCount; j++)
+                            {
+                                if (value.GetValue(i, j) != null)
+                                {
+                                    result[i - 1, j - 1] = ((Array)value).GetValue(i, j).ToString();
+                                }
+                                else
+                                {
+                                    result[i - 1, j - 1] = "";
+                                }
+                                
+                            }
+                        }
+                    }
+
+                    //result.Cast<int>()
+                    //    .Select((x, i) => new { x, index = i / result.GetLength(1) })
+                    //    .GroupBy(x => x.index)
+                    //    .Select(x => x.Select(s => s.x).ToList()).Dump();
+
+
+                    //myArrayList.AddRange(result);
+                    return result;
+                }
+            }
+            return result;
+        }
+        #endregion
+        #region SORT RANGE
+        #region PASTE IN CELL
+        public void InsertObject(string workbookname, int column, int row, string filepath, string iconname ,int iconindex, int iconwidth = 1, int iconheight = 3)
+        {
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    //Select cell
+                    Excel.Range range = sheet.Cells[row, column];
+                    //Enter forumla
+
+                    range.Activate();
+
+                    //var obj = xlapp.ActiveSheet.OLEObjects.Add(Filename: filepath,
+                    //    Link: false,
+                    //    DisplayAsIcon: true,
+                    //    IconFileName: iconname,
+                    //    IconIndex: iconindex,
+                    //    IconLabel: iconname,
+                    //    Left: 3,
+                    //    Top: 1,
+                    //    Width: 3,
+                    //    Height: 2);
+                    
+
+                    Excel.OLEObject testshape = xlapp.ActiveSheet.OLEObjects.Add(Filename: filepath,
+                        Link: false,
+                        DisplayAsIcon: true,
+                        IconFileName: iconname,
+                        IconIndex: iconindex,
+                        IconLabel: iconname,
+                        Left: false,
+                        Top: false,
+                        Width: 180,
+                        Height: 200);
+
+                    //object theObject = testshape.Object;
+                    testshape.Width = 200;
+                    testshape.Height = 200;
+
+
+                    //theObject.GetType().InvokeMember("Caption", System.Reflection.BindingFlags.SetProperty, null, theObject, new object[] { "caption" })
+
+                    //Excel.OLEObjects oleObjects = (sheet as Excel._Worksheet).OLEObjects() as Excel.OLEObjects;
+                    //Excel.OLEObject testshape = oleObjects.Item("Object 6") as OLEObject;
+                    //object theObject = obj.Object;
+
+                    //object activeSheet = xlapp.ActiveSheet;
+                    //Excel.OLEObjects oleObjects = (activeSheet as Excel._Worksheet).OLEObjects() as Excel.OLEObjects;
+                    //Excel.OLEObject testshape = oleObjects.Item(iconname) as OLEObject;
+                    ////object theObject = testshape.Object;
+                    //testshape.Width = 150;
+                    //double left = theObject.
+                    //Console.WriteLine(left);
 
                 }
             }
         }
         #endregion
-        #region CHANGE FORMAT OF RANGE
-        public void ChangeFormatOfRange(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, string format)
-        {
-            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
-            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-
-                if (workbook.Name == workbookname)
-                {
-                    if (format == "@")
-                    {
-                        Array fieldInfoArray = new int[,] { { 1, 2 } };
-                        Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                        //Select cells in a range
-
-                        Excel.Range range = sheet.get_Range(rngFrom, rngTo);
-                        range.NumberFormat = format;
-                        range.TextToColumns(range,
-                        XlTextParsingType.xlDelimited,
-                        XlTextQualifier.xlTextQualifierDoubleQuote,
-                        true,        // Consecutive Delimiter
-                        Type.Missing,// Tab
-                        Type.Missing,// Semicolon
-                        false,        // Comma
-                        false,       // Space
-                        true,// Other
-                        "",         // Other Char
-                        fieldInfoArray,// Field Info
-                        Type.Missing,// Decimal Separator
-                        Type.Missing,// Thousands Separator
-                        Type.Missing);// Trailing Minus Numbers
-                    }
-                    else
-                    {
-                        Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                        //Select cells in a range
-
-                        Excel.Range range = sheet.get_Range(rngFrom, rngTo);
-                        range.TextToColumns();
-                        range.NumberFormat = format;
-                        range.TextToColumns();
-                    }
-
-                }
-            }
-        }
         #endregion
 
 
@@ -524,7 +569,7 @@ namespace ConsoleApp1
             //string[] columnlist = { "ColumnTest1"};
             //string[] valuefieldlist = { "ColumnTest2"};
             string[] filterfieldlist = {"e", "f"  };
-            sheetname.ChangeFormatOfRange("Ctest.xlsx",1,1,1,5,"0");
+            Array output = sheetname.GetExcelRangeToArray("Ctest.xlsx",1,1, 3, 5);
             //Console.WriteLine(result);
             //Console.WriteLine(result.Item1);
             //Console.WriteLine(result.Item2);
