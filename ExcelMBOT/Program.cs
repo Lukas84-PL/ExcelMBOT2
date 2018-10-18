@@ -403,151 +403,99 @@ namespace ConsoleApp1
         }
         #endregion
 
-        #region APPLY FILTER
-        public void ApplyFilter(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto, int filtercolumn,string[] filterlist)
+        #region GO TO LAST ROW OF SPECIFIC COLUMN
+        public void GoToLastRowOfSpecificasColumn(string workbookname, int column, int rowstart)
         {
-            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
-            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
             foreach (Excel.Workbook workbook in xlapp.Workbooks)
             {
                 if (workbook.Name == workbookname)
                 {
                     Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
-                    //range.AutoFilter(3, "e");
+                    //Select column
 
-                    foreach (var item in filterlist)
+                    while (sheet.Cells[rowstart, column].value != null)
                     {
-                        range.AutoFilter(filtercolumn, "<>" + item,
-                        Excel.XlAutoFilterOperator.xlFilterValues, Type.Missing, true);
-                        
+                        ++rowstart;
                     }
+                    rowstart -= 1; 
+                    Excel.Range lastcell = xlapp.Cells[rowstart, column];
 
+                    lastcell.Activate();
+                    lastcell.Select();
+                }
+            }
+        }
+        #endregion
+        #region GO TO LAST COLUMN OF USED RANGE
+        public void GoToLastColumnOfUsedRange(string workbookname, int row)
+        {
+            int columncount = 0;
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                    columncount = sheet.UsedRange.Columns.Count;
+                    Range lastcolumn = xlapp.Cells[row, columncount];
+                    lastcolumn.Select();
+                    lastcolumn.Activate();
+                }
+            }
 
+        }
+        #endregion
+        #region CLOSE SPREADSHEET WITH SAVING
+        public void QuitExcelApp(string workbookname)
+        {
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    xlapp.Quit();
+                }
+            }
+        }
+        #endregion
+        #region CLOSE SPREADSHEET WITHOUT SAVING
+        public void CloseSpreadsheetWithoutSaving(string workbookname)
+        {
+
+            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+            {
+                if (workbook.Name == workbookname)
+                {
+                    workbook.Close(false);
                 }
             }
         }
         #endregion
 
         #region GET EXCEL RANGE TO ARRAY
-        public Array GetExcelRangeToArray(string workbookname, int columnfrom, int rowfrom, int columnto, int rowto)
+        public void OpenSpreadsheet(string workbookname, string path)
         {
-            Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
-            Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-            string[,] result = null;
+            xlapp.Workbooks.Open(path + workbookname, false, false);
 
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-
-                //ArrayList arrForValues = new ArrayList();
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-
-                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
-
-                    object[,] value = range.Value; //the value 
-
-
-                    //ArrayList[,] arr = new ArrayList[,](value);
-
-                    int rank = ((Array)value).Rank;
-                    if (rank == 2)
-                    {
-                        int columnCount = columnto - (columnfrom - 1);
-                        int rowCount = rowto - (rowfrom - 1);
-                        result = new string[rowCount, columnCount];
-
-                        for (int i = 1; (i - 1) < rowCount; i++)
-                        {
-                            for (int j = 1; (j - 1) < columnCount; j++)
-                            {
-                                if (value.GetValue(i, j) != null)
-                                {
-                                    result[i - 1, j - 1] = ((Array)value).GetValue(i, j).ToString();
-                                }
-                                else
-                                {
-                                    result[i - 1, j - 1] = "";
-                                }
-                                
-                            }
-                        }
-                    }
-
-                    //result.Cast<int>()
-                    //    .Select((x, i) => new { x, index = i / result.GetLength(1) })
-                    //    .GroupBy(x => x.index)
-                    //    .Select(x => x.Select(s => s.x).ToList()).Dump();
-
-
-                    //myArrayList.AddRange(result);
-                    return result;
-                }
-            }
-            return result;
         }
         #endregion
         #region SORT RANGE
-        #region PASTE IN CELL
-        public void InsertObject(string workbookname, int column, int row, string filepath, string iconname ,int iconindex, int iconwidth = 1, int iconheight = 3)
+        #region DRAG CELL VALUE TO RANGE
+        public void DragCellValueToRange(string workbookname,int column, int rowfrom, int rowto)
         {
+            Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
+            Excel.Range rngTo = xlapp.Cells[rowto, column];
+
             foreach (Excel.Workbook workbook in xlapp.Workbooks)
             {
                 if (workbook.Name == workbookname)
                 {
                     Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cell
-                    Excel.Range range = sheet.Cells[row, column];
-                    //Enter forumla
 
-                    range.Activate();
+                    Excel.Range rng = xlapp.get_Range(rngFrom, rngFrom);
 
-                    //var obj = xlapp.ActiveSheet.OLEObjects.Add(Filename: filepath,
-                    //    Link: false,
-                    //    DisplayAsIcon: true,
-                    //    IconFileName: iconname,
-                    //    IconIndex: iconindex,
-                    //    IconLabel: iconname,
-                    //    Left: 3,
-                    //    Top: 1,
-                    //    Width: 3,
-                    //    Height: 2);
-                    
-
-                    Excel.OLEObject testshape = xlapp.ActiveSheet.OLEObjects.Add(Filename: filepath,
-                        Link: false,
-                        DisplayAsIcon: true,
-                        IconFileName: iconname,
-                        IconIndex: iconindex,
-                        IconLabel: iconname,
-                        Left: false,
-                        Top: false,
-                        Width: 180,
-                        Height: 200);
-
-                    //object theObject = testshape.Object;
-                    testshape.Width = 200;
-                    testshape.Height = 200;
-
-
-                    //theObject.GetType().InvokeMember("Caption", System.Reflection.BindingFlags.SetProperty, null, theObject, new object[] { "caption" })
-
-                    //Excel.OLEObjects oleObjects = (sheet as Excel._Worksheet).OLEObjects() as Excel.OLEObjects;
-                    //Excel.OLEObject testshape = oleObjects.Item("Object 6") as OLEObject;
-                    //object theObject = obj.Object;
-
-                    //object activeSheet = xlapp.ActiveSheet;
-                    //Excel.OLEObjects oleObjects = (activeSheet as Excel._Worksheet).OLEObjects() as Excel.OLEObjects;
-                    //Excel.OLEObject testshape = oleObjects.Item(iconname) as OLEObject;
-                    ////object theObject = testshape.Object;
-                    //testshape.Width = 150;
-                    //double left = theObject.
-                    //Console.WriteLine(left);
-
+                    rng.AutoFill(xlapp.get_Range(rngFrom, rngTo),
+                        Excel.XlAutoFillType.xlFillWeekdays);
                 }
             }
         }
@@ -558,18 +506,20 @@ namespace ConsoleApp1
         static void Main(string[] args)
         {
 
-            Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
+            //.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
 
             Program sheetname = new Program();
 
             //List<string> list = new List<string> { "e", "f" };
             //sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx");
             // sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx", "A", "C", 7);
-            //string[] rowlist = { "Question", "Answer", "Test" };
+            string[] rowlist = { "dupa"};
             //string[] columnlist = { "ColumnTest1"};
             //string[] valuefieldlist = { "ColumnTest2"};
             string[] filterfieldlist = {"e", "f"  };
-            Array output = sheetname.GetExcelRangeToArray("Ctest.xlsx",1,1, 3, 5);
+            object cols = new object[] { 1,2 };
+           // sheetname.CloseSpreadsheetWithSaving("Ctest.xlsx");
+            //string wynik = sheetname.GetAdressOfValue("Ctest.xlsx", 1, 1, 8, 3, "dupa", "kupa");
             //Console.WriteLine(result);
             //Console.WriteLine(result.Item1);
             //Console.WriteLine(result.Item2);
@@ -578,6 +528,6 @@ namespace ConsoleApp1
             //Console.WriteLine(workbookname);
 
 
-            }
+        }
     }
 }
