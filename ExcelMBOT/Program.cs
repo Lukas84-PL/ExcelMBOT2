@@ -16,12 +16,13 @@ using System.Xml.Linq;
 
 using System.Data;
 using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace ConsoleApp1
 {
     public class Program
     {
-        Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
+        Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
         #region GET: SHEETNAME, COLUMN COUNT, ROW COUNT, CHANGE SHEET NAME, SHEET COUNT
         public Tuple<int, int, string, int> GetSheetName(Excel.Application xlapp, string workbookname, string newsheetname = "")
         {
@@ -501,6 +502,110 @@ namespace ConsoleApp1
         }
         #endregion
         #endregion
+        //#region CREATE EXCEL WORKBOOK
+        //public string CreateExcelWrokbook(string workbookname)
+        //{
+        //    try
+        //    {
+        //        Application xlApp = new Application();
+
+        //        xlApp.Workbooks.Add("test.xlsx");
+        //        return "Workbook created";
+
+        //    }
+        //    catch (Exception e)
+        //    {
+
+        //        return e.ToString();
+        //    }
+        //}
+        //#endregion
+        #region LOOP THROUGH 2 ROWS IN COLUMN TO FIND 2 VALUES
+        public List<string> LoopThrough3RowsInColumnsFor3Values(string workbookname, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, string searchvalue2, int searchcolumn2, string searchvalue3, int searchcolumn3)
+        {
+            try
+            {
+                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
+                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                string cellvalue1 = null;
+                string cellvalue2 = null;
+                string cellvalue3 = null;
+                string celladress1 = null;
+                string celladress2 = null;
+                string celladress3 = null;
+                List<string> returnlist = new List<string> {};
+                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
+                while (sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                {
+
+                    if (sheet.Cells[startrow, searchcolumn1].text == searchvalue1 && sheet.Cells[startrow, searchcolumn2].text == searchvalue2 && sheet.Cells[startrow, searchcolumn3].text == searchvalue3)
+                    {
+                        cellvalue1 = sheet.Cells[startrow, searchcolumn1].text;
+                        Excel.Range adressrange1 = xlapp.Cells[startrow, searchcolumn1];
+                        celladress1 = adressrange1.get_AddressLocal(false, false, Excel.XlReferenceStyle.xlA1).ToString();
+                        returnlist.Add(celladress1);
+                        returnlist.Add(cellvalue1);
+                        cellvalue2 = sheet.Cells[startrow, searchcolumn2].text;
+                        Excel.Range adressrange2 = xlapp.Cells[startrow, searchcolumn2];
+                        celladress2 = adressrange2.get_AddressLocal(false, false, Excel.XlReferenceStyle.xlA1).ToString();
+                        returnlist.Add(celladress2);
+                        returnlist.Add(cellvalue2);
+                        cellvalue3 = sheet.Cells[startrow, searchcolumn3].text;
+                        Excel.Range adressrange3 = xlapp.Cells[startrow, searchcolumn3];
+                        celladress3 = adressrange3.get_AddressLocal(false, false, Excel.XlReferenceStyle.xlA1).ToString();
+                        returnlist.Add(celladress3);
+                        returnlist.Add(cellvalue3);
+
+                        break;
+                    }
+                    ++startrow;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ROWS IN COLUMN AND CHECK IF CELL CONTAINS STRING
+        public string ActivateSheet(string workbookname, string visible, string sheetname)
+        {
+            try
+            {
+
+                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
+                xlapp.DisplayAlerts = false;
+                if (visible == "yes" || visible == "Yes" || visible == "YES")
+                {
+                    xlapp.Visible = true;
+                }
+                else
+                {
+                    xlapp.Visible = false;
+                }
+                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+
+
+                Excel.Worksheet sheet = (Excel.Worksheet)workbook.Sheets[sheetname];
+                sheet.Select();
+                sheet.Activate();
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+
+                return e.ToString();
+            }
+        }
+        #endregion
 
 
         static void Main(string[] args)
@@ -513,12 +618,12 @@ namespace ConsoleApp1
             //List<string> list = new List<string> { "e", "f" };
             //sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx");
             // sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx", "A", "C", 7);
-            string[] rowlist = { "dupa"};
+            //string[] rowlist = { "dupa"};
             //string[] columnlist = { "ColumnTest1"};
             //string[] valuefieldlist = { "ColumnTest2"};
-            string[] filterfieldlist = {"e", "f"  };
-            object cols = new object[] { 1,2 };
-           // sheetname.CloseSpreadsheetWithSaving("Ctest.xlsx");
+            //string[] filterfieldlist = {"e", "f"  };
+            //object cols = new object[] { 1,2 };
+            sheetname.ActivateSheet("Ctest.xlsx","yes", "What is SFS 2.0");
             //string wynik = sheetname.GetAdressOfValue("Ctest.xlsx", 1, 1, 8, 3, "dupa", "kupa");
             //Console.WriteLine(result);
             //Console.WriteLine(result.Item1);
