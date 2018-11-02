@@ -575,13 +575,15 @@ namespace ConsoleApp1
         }
         #endregion
         #region LOOP THROUGH ROWS IN COLUMN AND CHECK IF CELL CONTAINS STRING
-        public string ActivateSheet(string workbookname, string visible, string sheetname)
+        public string SaveAsCSV(string workbookname, string visible, string newfilenamefullpath = "")
         {
             try
             {
-
+                string status = "Failed";
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
                     xlapp.Visible = true;
@@ -590,14 +592,16 @@ namespace ConsoleApp1
                 {
                     xlapp.Visible = false;
                 }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                workbook.SaveAs(newfilenamefullpath, XlFileFormat.xlCSV);
 
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.Sheets[sheetname];
-                sheet.Select();
-                sheet.Activate();
-                return "Workbook found";
-
+                foreach (Excel.Workbook wb in xlapp.Workbooks)
+                {
+                    if ((workbook.Path + @"\" + workbook.Name) == newfilenamefullpath)
+                    {
+                        status = "Completed";
+                    }
+                }
+                return status;
             }
             catch (Exception e)
             {
@@ -623,7 +627,7 @@ namespace ConsoleApp1
             //string[] valuefieldlist = { "ColumnTest2"};
             //string[] filterfieldlist = {"e", "f"  };
             //object cols = new object[] { 1,2 };
-            sheetname.ActivateSheet("Ctest.xlsx","yes", "What is SFS 2.0");
+            sheetname.SaveAsCSV("dziala.xlsx","yes", @"C:\Users\LXB0906\Desktop\test.csv");
             //string wynik = sheetname.GetAdressOfValue("Ctest.xlsx", 1, 1, 8, 3, "dupa", "kupa");
             //Console.WriteLine(result);
             //Console.WriteLine(result.Item1);

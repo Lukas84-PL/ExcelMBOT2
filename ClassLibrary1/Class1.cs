@@ -24,10 +24,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-            string status = "Failed";
-            Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-            xlapp.DisplayAlerts = false;
-            Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                string status = "Failed";
+                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
                     xlapp.Visible = true;
@@ -36,7 +37,7 @@ namespace ExcelDataManipulation
                 {
                     xlapp.Visible = false;
                 }
-            workbook.SaveAs(newfilenamefullpath);
+                workbook.SaveAs(newfilenamefullpath);
 
                 foreach (Excel.Workbook wb in xlapp.Workbooks)
                 {
@@ -54,6 +55,42 @@ namespace ExcelDataManipulation
             }
         }
         #endregion
+        #region SAVE AS CSV
+        public string SaveAsCSV(string workbookname, string visible, string newfilenamefullpath = "")
+        {
+            try
+            {
+                string status = "Failed";
+                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                if (visible == "yes" || visible == "Yes" || visible == "YES")
+                {
+                    xlapp.Visible = true;
+                }
+                else
+                {
+                    xlapp.Visible = false;
+                }
+                workbook.SaveAs(newfilenamefullpath, XlFileFormat.xlCSV);
+
+                foreach (Excel.Workbook wb in xlapp.Workbooks)
+                {
+                    if ((workbook.Path + @"\" + workbook.Name) == newfilenamefullpath)
+                    {
+                        status = "Completed";
+                    }
+                }
+                return status;
+            }
+            catch (Exception e)
+            {
+
+                return e.ToString();
+            }
+        }
+        #endregion
         #region SELECT RANGE
         public string SelectRange(string workbookname, string visible, int columnfrom, int rowfrom, int columnto, int rowto)
         {
@@ -61,6 +98,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -95,6 +133,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -126,6 +165,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -155,6 +195,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -189,6 +230,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -219,6 +261,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -249,6 +292,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -1426,6 +1470,7 @@ namespace ExcelDataManipulation
 
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
 
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
@@ -2257,6 +2302,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
                     xlapp.Visible = true;
@@ -2282,6 +2328,7 @@ namespace ExcelDataManipulation
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
                 xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
                 {
                     xlapp.Visible = true;
