@@ -10,598 +10,121 @@ using System.Windows;
 using System.Drawing;
 using Microsoft.Office.Interop.Excel;
 using System.Collections;
-using System.Data.Linq;
-using System.Xml;
-using System.Xml.Linq;
+using System.Diagnostics;
 
-using System.Data;
-using System.Text.RegularExpressions;
-using System.Globalization;
-
-namespace ConsoleApp1
+namespace ExcelDataManipulation
 {
-    public class Program
+    class ExcelInstance
     {
-        Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-        #region GET: SHEETNAME, COLUMN COUNT, ROW COUNT, CHANGE SHEET NAME, SHEET COUNT
-        public Tuple<int, int, string, int> GetSheetName(Excel.Application xlapp, string workbookname, string newsheetname = "")
-        {
-            string worksheetname = "Not found";
-            int rowcount = 0;
-            int columncount = 0;
-            int worksheetcount = 0;
+        [DllImport("Oleacc.dll")]
+        public static extern int AccessibleObjectFromWindow(
+       int hwnd, uint dwObjectID, byte[] riid,
+       ref Microsoft.Office.Interop.Excel.Window ptr);
 
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
+        public delegate bool EnumChildCallback(int hwnd, ref int lParam);
+
+        [DllImport("User32.dll")]
+        public static extern bool EnumChildWindows(
+        int hWndParent, EnumChildCallback lpEnumFunc,
+        ref int lParam);
+
+
+        [DllImport("User32.dll")]
+        public static extern int GetClassName(
+        int hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        public static bool EnumChildProc(int hwndChild, ref int lParam)
+        {
+            StringBuilder buf = new StringBuilder(128);
+            GetClassName(hwndChild, buf, 128);
+            if (buf.ToString() == "EXCEL7")
             {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Get worksheet name
-                    worksheetname = sheet.Name;
-                    //Get last used column count
-                    columncount = sheet.UsedRange.Columns.Count;
-                    //Get last used row count
-                    rowcount = sheet.UsedRange.Rows.Count;
-                    //Count number of sheets in workbook
-                    foreach (Excel.Worksheet ws in workbook.Worksheets)
-                    {
-                        worksheetcount++;
-                    }
-                    //If new name provided then change sheet name
-                    if (newsheetname != "")
-                    {
-                        sheet.Name = newsheetname;
-                    }
-                }
+                lParam = hwndChild;
+                return false;
             }
-
-            return Tuple.Create(columncount, rowcount, worksheetname, worksheetcount);
+            return true;
         }
-        #endregion
-        #region SAVEAS WORKBOOK
-        public string SaveAs(Excel.Application xlapp, string workbookname, string newfilename = "")
+        public string Instance(string workbookname, string visible, out Workbook workbook, out Application application, out Worksheet sheet, string sheetname = "")
         {
-            string status = "Failed";
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    //SaveAs
-                    workbook.SaveAs(newfilename);
+            Excel.Application app = new Excel.Application();
+            EnumChildCallback cb;
+            List<Process> procs = new List<Process>();
+            procs.AddRange(Process.GetProcessesByName("excel"));
 
-                    foreach (Excel.Workbook wb in xlapp.Workbooks)
+            foreach (Process p in procs)
+            {
+                if ((int)p.MainWindowHandle > 0)
+                {
+                    int childWindow = 0;
+                    cb = new EnumChildCallback(EnumChildProc);
+                    EnumChildWindows((int)p.MainWindowHandle, cb, ref childWindow);
+
+                    if (childWindow > 0)
                     {
-                        if ((workbook.Path + @"\" + workbook.Name) == newfilename)
+                        const uint OBJID_NATIVEOM = 0xFFFFFFF0;
+                        Guid IID_IDispatch = new Guid("{00020400-0000-0000-C000-000000000046}");
+                        Excel.Window window = null;
+                        int res = AccessibleObjectFromWindow(childWindow, OBJID_NATIVEOM, IID_IDispatch.ToByteArray(), ref window);
+                        if (res >= 0)
                         {
-                            status = "Completed";
+                            app = window.Application;
+                            Console.WriteLine(app.Name);
+                            try
+                            {
+                                workbook = app.Workbooks.get_Item(workbookname);
+                                app.DisplayAlerts = false;
+                                app.EnableEvents = false;
+                                application = app;
+                                if (sheetname == "")
+                                {
+                                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                                }
+                                else
+                                {
+                                    sheet = (Excel.Worksheet)workbook.Worksheets[sheetname];
+                                }
+
+                                if (visible == "yes" || visible == "Yes" || visible == "YES")
+                                {
+                                    app.Visible = true;
+                                }
+                                else
+                                {
+                                    app.Visible = false;
+                                }
+                                return "Workbook found";
+                            }
+                            catch (Exception)
+                            {
+
+                            }
+
+
+
                         }
                     }
-
                 }
             }
-
-            return status;
+            workbook = null;
+            sheet = null;
+            application = null;
+            return "Excel not found";
         }
-        #endregion
-        #region SELECT RANGE
-        public void SelectRange(Excel.Application xlapp, string workbookname, string columnfrom, int rowfrom, string columnto, int rowto)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = sheet.get_Range(columnfrom + rowfrom, columnto + rowto);
-                    range.Select();
-                }
-            }
-        }
-        #endregion
-
-        #region SELECT BLANK CELLS OF SELECTION
-        public void SelectBlankCellsOfSelection(Excel.Application xlapp, string workbookname)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Create object from selection
-                    Excel.Range range = xlapp.ActiveWindow.Selection;
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells rows
-                    blankcells.Select();
-
-                }
-            }
-        }
-        #endregion
-        #region SELECT BLANK CELLS OF RANGE
-        public void SelectBlankCellsOfRange(Excel.Application xlapp, string workbookname, string column, int rowfrom, int rowto)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = sheet.get_Range(column + rowfrom, column + rowto);
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells rows
-                    blankcells.Select();
-
-                }
-            }
-        }
-        #endregion
-        #region SELECT BLANK CELLS OF COLUMN
-        public void SelectBlankCellsOfColumn(Excel.Application xlapp, string workbookname, string column)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select column
-                    Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells rows
-                    blankcells.Select();
-
-                }
-            }
-        }
-        #endregion
-        #region SELECT BLANK CELLS OF ROW
-        public void SelectBlankCellsOfRow(Excel.Application xlapp, string workbookname, int row)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select column
-                    Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells rows
-                    blankcells.Select();
-
-                }
-            }
-        }
-        #endregion
-
-        #region DELETE BLANK ROWS OF SELECTION
-        public void DeleteBlankRowsInSelection(Excel.Application xlapp, string workbookname)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Create object from selection
-                    Excel.Range range = xlapp.ActiveWindow.Selection;
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells rows
-                    blankcells.EntireRow.Delete();
-
-                }
-            }
-        }
-        #endregion
-        #region DELETE BLANK ROWS OF RANGE
-        public void DeleteBlankRowsOfRange(Excel.Application xlapp, string workbookname, string column, int rowfrom, int rowto)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = sheet.get_Range(column + rowfrom, column + rowto);
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells rows
-                    blankcells.EntireRow.Delete();
-
-                }
-            }
-        }
-        #endregion
-        #region DELETE BLANK ROWS OF COLUMN
-        public void DeleteBlankRowsOfColumn(Excel.Application xlapp, string workbookname, string column)
-        {
-
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select column
-                    Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
-                    //Select blank cells of column
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells rows
-                    blankcells.EntireRow.Delete();
-
-                }
-            }
-        }
-        #endregion
-
-        #region DELETE BLANK COLUMNS IN A SELECTION
-        public void DeleteBlankColumnsOfSelection(Excel.Application xlapp, string workbookname)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = xlapp.ActiveWindow.Selection;
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells columns
-                    blankcells.EntireColumn.Delete();
-
-                }
-            }
-        }
-        #endregion
-        #region DELETE BLANK COLUMNS IN A RANGE
-        public void DeleteBlankColumnsOfRange(Excel.Application xlapp, string workbookname, string columnfrom, string columnto, int row)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = sheet.get_Range(columnfrom + row, columnto + row);
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells columns
-                    blankcells.EntireColumn.Delete();
-
-                }
-            }
-        }
-        #endregion
-        #region DELETE BLANK COLUMNS OF ROW
-        public void DeleteBlankColumnsOfRow(Excel.Application xlapp, string workbookname, int row)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
-                    //Select blank cells in a range
-                    Excel.Range blankcells = range.SpecialCells(Excel.XlCellType.xlCellTypeBlanks);
-                    //Delete blank cells columns
-                    blankcells.EntireColumn.Delete();
-
-                }
-            }
-        }
-        #endregion
-
-
-        #region DELETE ROWS OF SELECTED CELLS
-        public void DeleteRowsOfSelectedCells(Excel.Application xlapp, string workbookname)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Create object from selection
-                    Excel.Range range = xlapp.ActiveWindow.Selection;
-                    //Delete selected rows
-                    range.EntireRow.Delete();
-
-                }
-            }
-        }
-        #endregion
-        #region DELETE COLUMNS OF SELECTED CELLS
-        public void DeleteColumnsOfSelectedCells(Excel.Application xlapp, string workbookname)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Create object from selection
-                    Excel.Range range = xlapp.ActiveWindow.Selection;
-                    //Delete selected rows
-                    range.EntireColumn.Delete();
-
-                }
-            }
-        }
-        #endregion
-
-        #region SELECT ROW
-        public void SelectEntireRow(Excel.Application xlapp, string workbookname, int row)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
-                    //Select row
-                    range.Select();
-                }
-            }
-        }
-        #endregion
-        #region SELECT COLUMN
-        public void SelectEntireColumn(Excel.Application xlapp, string workbookname, string column)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select column
-                    Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
-                    //Delete blank cells rows
-                    range.Select();
-                }
-            }
-        }
-        #endregion
-        #region AUTOFIT ROW
-        public void AutofitRow(string workbookname, int row)
-        {
-
-            Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select cells in a range
-                    Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
-                    //Select row
-                    range.AutoFit();
-                }
-            }
-        }
-        #endregion
-
-        #region DRAG FORMULA
-        public void DragFromula(string workbookname)
-        {
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Create object from selection
-                    string formula = sheet.Cells[7][2].Formula;
-                    sheet.Cells[7][3].Formula = xlapp.ConvertFormula(formula, Excel.XlReferenceStyle.xlA1, Excel.XlReferenceStyle.xlR1C1, Excel.XlReferenceType.xlRelative, sheet.Cells[7][2]);
-
-                    Excel.Range oRng = sheet.get_Range("H2").get_Resize(100, 1);
-                    oRng = xlapp.ConvertFormula(formula, Excel.XlReferenceStyle.xlA1, Excel.XlReferenceStyle.xlR1C1, Excel.XlReferenceType.xlRelative, sheet.Cells[7][2]);
-                    //range.Formula = "IF(AND(A" + 1 + "<> 0,B" + 1 + "<>2),\"YES\",\"NO\")";
-
-                    //Delete selected rows
-                    //range.ClearContents();
-
-                }
-            }
-        }
-        #endregion
-
-        #region GO TO LAST ROW OF SPECIFIC COLUMN
-        public void GoToLastRowOfSpecificasColumn(string workbookname, int column, int rowstart)
-        {
-
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select column
-
-                    while (sheet.Cells[rowstart, column].value != null)
-                    {
-                        ++rowstart;
-                    }
-                    rowstart -= 1; 
-                    Excel.Range lastcell = xlapp.Cells[rowstart, column];
-
-                    lastcell.Activate();
-                    lastcell.Select();
-                }
-            }
-        }
-        #endregion
-        #region GO TO LAST COLUMN OF USED RANGE
-        public void GoToLastColumnOfUsedRange(string workbookname, int row)
-        {
-            int columncount = 0;
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    columncount = sheet.UsedRange.Columns.Count;
-                    Range lastcolumn = xlapp.Cells[row, columncount];
-                    lastcolumn.Select();
-                    lastcolumn.Activate();
-                }
-            }
-
-        }
-        #endregion
-        #region CLOSE SPREADSHEET WITH SAVING
-        public void QuitExcelApp(string workbookname)
-        {
-
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    xlapp.Quit();
-                }
-            }
-        }
-        #endregion
-        #region CLOSE SPREADSHEET WITHOUT SAVING
-        public void CloseSpreadsheetWithoutSaving(string workbookname)
-        {
-
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    workbook.Close(false);
-                }
-            }
-        }
-        #endregion
-
-        #region GET EXCEL RANGE TO ARRAY
-        public void OpenSpreadsheet(string workbookname, string path)
-        {
-            xlapp.Workbooks.Open(path + workbookname, false, false);
-
-        }
-        #endregion
-        #region SORT RANGE
-        #region DRAG CELL VALUE TO RANGE
-        public void DragCellValueToRange(string workbookname,int column, int rowfrom, int rowto)
-        {
-            Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
-            Excel.Range rngTo = xlapp.Cells[rowto, column];
-
-            foreach (Excel.Workbook workbook in xlapp.Workbooks)
-            {
-                if (workbook.Name == workbookname)
-                {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-
-                    Excel.Range rng = xlapp.get_Range(rngFrom, rngFrom);
-
-                    rng.AutoFill(xlapp.get_Range(rngFrom, rngTo),
-                        Excel.XlAutoFillType.xlFillWeekdays);
-                }
-            }
-        }
-        #endregion
-        #endregion
-        //#region CREATE EXCEL WORKBOOK
-        //public string CreateExcelWrokbook(string workbookname)
-        //{
-        //    try
-        //    {
-        //        Application xlApp = new Application();
-
-        //        xlApp.Workbooks.Add("test.xlsx");
-        //        return "Workbook created";
-
-        //    }
-        //    catch (Exception e)
-        //    {
-
-        //        return e.ToString();
-        //    }
-        //}
-        //#endregion
-        #region LOOP THROUGH 2 ROWS IN COLUMN TO FIND 2 VALUES
-        public List<string> LoopThrough3RowsInColumnsFor3Values(string workbookname, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, string searchvalue2, int searchcolumn2, string searchvalue3, int searchcolumn3)
+        #region SKU COSTING SPECIFIC
+        public string ActivateSheet(string workbookname, string visible, string sheetname)
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                string cellvalue1 = null;
-                string cellvalue2 = null;
-                string cellvalue3 = null;
-                string celladress1 = null;
-                string celladress2 = null;
-                string celladress3 = null;
-                List<string> returnlist = new List<string> {};
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
-                {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet, sheetname);
+                sheet.Select();
+                sheet.Activate();
+                return "Workbook found";
 
-                    if (sheet.Cells[startrow, searchcolumn1].text == searchvalue1 && sheet.Cells[startrow, searchcolumn2].text == searchvalue2 && sheet.Cells[startrow, searchcolumn3].text == searchvalue3)
-                    {
-                        cellvalue1 = sheet.Cells[startrow, searchcolumn1].text;
-                        Excel.Range adressrange1 = xlapp.Cells[startrow, searchcolumn1];
-                        celladress1 = adressrange1.get_AddressLocal(false, false, Excel.XlReferenceStyle.xlA1).ToString();
-                        returnlist.Add(celladress1);
-                        returnlist.Add(cellvalue1);
-                        cellvalue2 = sheet.Cells[startrow, searchcolumn2].text;
-                        Excel.Range adressrange2 = xlapp.Cells[startrow, searchcolumn2];
-                        celladress2 = adressrange2.get_AddressLocal(false, false, Excel.XlReferenceStyle.xlA1).ToString();
-                        returnlist.Add(celladress2);
-                        returnlist.Add(cellvalue2);
-                        cellvalue3 = sheet.Cells[startrow, searchcolumn3].text;
-                        Excel.Range adressrange3 = xlapp.Cells[startrow, searchcolumn3];
-                        celladress3 = adressrange3.get_AddressLocal(false, false, Excel.XlReferenceStyle.xlA1).ToString();
-                        returnlist.Add(celladress3);
-                        returnlist.Add(cellvalue3);
-
-                        break;
-                    }
-                    ++startrow;
-                }
-
-
-                return returnlist;
-
-            }
-            catch (Exception e)
-            {
-                string exc = e.ToString();
-                List<string> returnlist = new List<string> { exc };
-                return returnlist;
-            }
-        }
-        #endregion
-        #region LOOP THROUGH ROWS IN COLUMN AND CHECK IF CELL CONTAINS STRING
-        public string SaveAsCSV(string workbookname, string visible, string newfilenamefullpath = "")
-        {
-            try
-            {
-                string status = "Failed";
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                workbook.SaveAs(newfilenamefullpath, XlFileFormat.xlCSV);
-
-                foreach (Excel.Workbook wb in xlapp.Workbooks)
-                {
-                    if ((workbook.Path + @"\" + workbook.Name) == newfilenamefullpath)
-                    {
-                        status = "Completed";
-                    }
-                }
-                return status;
             }
             catch (Exception e)
             {
@@ -611,32 +134,18 @@ namespace ConsoleApp1
         }
         #endregion
 
-
+    }
+    
+    
+    class Program
+    {
         static void Main(string[] args)
         {
+            ExcelInstance obj = new ExcelInstance();
+            List<string> output = new List<string>();
 
-            //.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
-
-            Program sheetname = new Program();
-
-            //List<string> list = new List<string> { "e", "f" };
-            //sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx");
-            // sheetname.DeleteBlankColumnsOfSelection(xlapp, "Ctest.xlsx", "A", "C", 7);
-            //string[] rowlist = { "dupa"};
-            //string[] columnlist = { "ColumnTest1"};
-            //string[] valuefieldlist = { "ColumnTest2"};
-            //string[] filterfieldlist = {"e", "f"  };
-            //object cols = new object[] { 1,2 };
-            sheetname.SaveAsCSV("dziala.xlsx","yes", @"C:\Users\LXB0906\Desktop\test.csv");
-            //string wynik = sheetname.GetAdressOfValue("Ctest.xlsx", 1, 1, 8, 3, "dupa", "kupa");
-            //Console.WriteLine(result);
-            //Console.WriteLine(result.Item1);
-            //Console.WriteLine(result.Item2);
-            //Console.WriteLine(result.Item3);
-            //Console.WriteLine(result.Item4);
-            //Console.WriteLine(workbookname);
-
-
+             obj.ActivateSheet("CEDC analysis_FR05.xlsb","Yes", " Intercompany");
         }
     }
+
 }

@@ -10,14 +10,113 @@ using System.Windows;
 using System.Drawing;
 using Microsoft.Office.Interop.Excel;
 using System.Collections;
+using System.Diagnostics;
 
 namespace ExcelDataManipulation
 {
-    public class ExcelMBOT
+    class ExcelInstance
     {
+        [DllImport("Oleacc.dll")]
+        public static extern int AccessibleObjectFromWindow(
+       int hwnd, uint dwObjectID, byte[] riid,
+       ref Microsoft.Office.Interop.Excel.Window ptr);
 
-        
+        public delegate bool EnumChildCallback(int hwnd, ref int lParam);
 
+        [DllImport("User32.dll")]
+        public static extern bool EnumChildWindows(
+        int hWndParent, EnumChildCallback lpEnumFunc,
+        ref int lParam);
+
+
+        [DllImport("User32.dll")]
+        public static extern int GetClassName(
+        int hWnd, StringBuilder lpClassName, int nMaxCount);
+
+        public static bool EnumChildProc(int hwndChild, ref int lParam)
+        {
+            StringBuilder buf = new StringBuilder(128);
+            GetClassName(hwndChild, buf, 128);
+            if (buf.ToString() == "EXCEL7")
+            {
+                lParam = hwndChild;
+                return false;
+            }
+            return true;
+        }
+        public string Instance(string workbookname,string visible,out Workbook workbook, out Application application, out Worksheet sheet, string sheetname = "")
+        {
+            Excel.Application app = new Excel.Application();
+            EnumChildCallback cb;
+            List<Process> procs = new List<Process>();
+            procs.AddRange(Process.GetProcessesByName("excel"));
+
+            foreach (Process p in procs)
+            {
+                if ((int)p.MainWindowHandle > 0)
+                {
+                    int childWindow = 0;
+                    cb = new EnumChildCallback(EnumChildProc);
+                    EnumChildWindows((int)p.MainWindowHandle, cb, ref childWindow);
+
+                    if (childWindow > 0)
+                    {
+                        const uint OBJID_NATIVEOM = 0xFFFFFFF0;
+                        Guid IID_IDispatch = new Guid("{00020400-0000-0000-C000-000000000046}");
+                        Excel.Window window = null;
+                        int res = AccessibleObjectFromWindow(childWindow, OBJID_NATIVEOM, IID_IDispatch.ToByteArray(), ref window);
+                        if (res >= 0)
+                        {
+                            app = window.Application;
+                            Console.WriteLine(app.Name);
+                            try
+                            {
+                                workbook = app.Workbooks.get_Item(workbookname);
+                                app.DisplayAlerts = false;
+                                app.EnableEvents = false;
+                                application = app;
+
+                                if (sheetname == "")
+                                {
+                                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                                }
+                                else
+                                {
+                                    sheet = (Excel.Worksheet)workbook.Worksheets[sheetname];
+                                }
+
+                                if (visible == "yes" || visible == "Yes" || visible == "YES")
+                                {
+                                    app.Visible = true;
+                                }
+                                else
+                                {
+                                    app.Visible = false;
+                                }
+                                return "Workbook found";
+                            }
+                            catch (Exception)
+                            {
+
+                            }
+
+
+
+                        }
+                    }
+                }
+            }
+            workbook = null;
+            sheet = null;
+            application = null;
+            return "Excel not found";
+        }
+
+
+    }
+    public class ExcelMBOT 
+    {
+       
         #region ACTIONS
         #region SAVEAS WORKBOOK
         public string SaveAs(string workbookname, string visible, string newfilenamefullpath = "")
@@ -61,18 +160,12 @@ namespace ExcelDataManipulation
             try
             {
                 string status = "Failed";
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+
                 workbook.SaveAs(newfilenamefullpath, XlFileFormat.xlCSV);
 
                 foreach (Excel.Workbook wb in xlapp.Workbooks)
@@ -96,21 +189,15 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
                 //Select cells in a range
                     
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
@@ -131,20 +218,12 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Select cells in a range
                 sheet.Cells[row, column] = insertdata;
 
@@ -163,20 +242,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
 
                 return sheet.Cells[row, column].text;
 
@@ -193,22 +263,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Select cells in a range
 
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
@@ -228,19 +290,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.Copy();
@@ -259,19 +313,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 range.Copy();
@@ -290,19 +336,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 range.Copy();
@@ -322,18 +360,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Columns[columnfrom + ":" + columnfrom];
                 rangefrom.Copy();
@@ -355,18 +386,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Rows[rowfrom + ":" + rowfrom];
                 rangefrom.Copy();
@@ -388,18 +412,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Columns[columnfrom + ":" + columnfrom];
                 rangefrom.Copy();
@@ -420,18 +437,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Rows[rowfrom + ":" + rowfrom];
                 rangefrom.Copy();
@@ -452,18 +462,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cell
                 Excel.Range range = sheet.Cells[row, column];
                 //Enter forumla
@@ -485,21 +488,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-      
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Select cells in a range
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 range.Replace(oldstring, newstring);
@@ -518,18 +513,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.Replace(oldstring, newstring);
@@ -550,21 +538,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-            
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
                 //Select cells in a range
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 range.Font.Bold = true;
@@ -584,18 +565,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.Font.Bold = true;
@@ -615,18 +589,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.PasteSpecial(Excel.XlPasteType.xlPasteValues);
@@ -646,18 +613,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cell
                 Excel.Range range = sheet.Cells[row, column];
                 //Enter forumla
@@ -677,18 +637,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.PasteSpecial();
@@ -708,18 +661,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cell
                 Excel.Range range = sheet.Cells[row, column];
                 //Enter forumla
@@ -741,18 +687,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Select blank cells in a range
@@ -776,22 +715,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
                 Excel.Range rngTo = xlapp.Cells[rowto, column];
 
-            
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Select cells in a range
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 //Select blank cells in a range
@@ -813,18 +744,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Select blank cells in a range
@@ -848,18 +772,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Select blank cells in a range
@@ -883,18 +800,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Select blank cells in a range
@@ -917,22 +827,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
                 Excel.Range rngTo = xlapp.Cells[rowto, column];
 
-            
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Select cells in a range
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 //Select blank cells in a range
@@ -955,18 +857,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Select blank cells of column
@@ -990,18 +885,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Select blank cells in a range
@@ -1024,22 +912,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[row, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[row, columnto];
 
-            
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Select cells in a range
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 //Select blank cells in a range
@@ -1062,18 +942,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Select blank cells in a range
@@ -1098,18 +971,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete selected rows
@@ -1130,18 +996,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete selected rows
@@ -1162,18 +1021,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete selected rows
@@ -1194,22 +1046,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
-           
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Create object from selection
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 //Delete selected rows
@@ -1231,18 +1075,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Select row
@@ -1263,18 +1100,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Delete blank cells rows
@@ -1296,18 +1126,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete blank cells rows
@@ -1328,18 +1151,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Delete blank cells rows
@@ -1360,18 +1176,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select column
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete blank cells rows
@@ -1392,18 +1201,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Delete blank cells rows
@@ -1468,22 +1270,11 @@ namespace ExcelDataManipulation
             try
             {
 
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.Sheets[sheetname];
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet, sheetname);
                 sheet.Select();
                 sheet.Activate();
                 return "Workbook found";
@@ -1561,21 +1352,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
 
-                    while (sheet.Cells[rowstart +1, column].value != null || sheet.Cells[rowstart +2, column].value != null)
+
+                while (sheet.Cells[rowstart +1, column].value != null || sheet.Cells[rowstart +2, column].value != null)
                     {
                         ++rowstart;
                     }
@@ -1597,21 +1381,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
-                    //Select column
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                //Select column
 
-                    while (sheet.Cells[row, columnstart +1].value != null || sheet.Cells[row, columnstart +2].value != null)
+                while (sheet.Cells[row, columnstart +1].value != null || sheet.Cells[row, columnstart +2].value != null)
                     {
                         ++columnstart;
                     }
@@ -1633,19 +1410,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Autofit column
@@ -1667,18 +1436,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Autofit row
@@ -1699,18 +1461,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Delete sheet
                 sheet.Delete();
                 return "Workbook found";
@@ -1730,44 +1485,40 @@ namespace ExcelDataManipulation
             try
             {
 
-                Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
+
                 List<string> workbooklist = new List<string>();
                 Excel.Workbook wkb = null;
                 string wkbname;
                 string newworkbook = "Unable to find new workbook name";
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 //Find all open workbooks and add their names to the list
                 foreach (Excel.Workbook activewkbs in xlapp.Workbooks)
-            {
-                wkbname = Convert.ToString(activewkbs.Name);
-                workbooklist.Add(wkbname);
-                if (activewkbs.Name == workbookname)
                 {
-                    wkb = activewkbs;
-                }
-            }
-
-            if (wkb != null)
-            {
-                Excel.Worksheet sheet = (Excel.Worksheet)wkb.ActiveSheet;
-                //Copy sheet
-                sheet.Copy();
-                //Obtain name of newly created worksheet
-                foreach (Excel.Workbook wkbnew in xlapp.Workbooks)
-                {
-                    wkbname = Convert.ToString(wkbnew.Name);
-                    if (workbooklist.Contains(wkbname) == false)
+                    wkbname = Convert.ToString(activewkbs.Name);
+                    workbooklist.Add(wkbname);
+                    if (activewkbs.Name == workbookname)
                     {
-                        newworkbook = wkbname;
+                        wkb = activewkbs;
                     }
+                }
+
+                if (wkb != null)
+                {
+
+                //Copy sheet
+                    sheet.Copy();
+                    //Obtain name of newly created worksheet
+                    foreach (Excel.Workbook wkbnew in xlapp.Workbooks)
+                    {
+                        wkbname = Convert.ToString(wkbnew.Name);
+                        if (workbooklist.Contains(wkbname) == false)
+                        {
+                            newworkbook = wkbname;
+                        }
                 }
 
                 return newworkbook;
@@ -1790,41 +1541,21 @@ namespace ExcelDataManipulation
         {
             try
             {
-
-                Excel.Application xlapp = (Excel.Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                List<string> workbooklist = new List<string>();
                 Excel.Workbook wkbFrom = null;
                 Excel.Workbook wkbTo = null;
-                string wkbname;
-
-                foreach (Excel.Workbook activewkbs in xlapp.Workbooks)
-                {
-                    wkbname = Convert.ToString(activewkbs.Name);
-                    workbooklist.Add(wkbname);
-                    if (activewkbs.Name == workbooknameFROM)
-                    {
-                        wkbFrom = activewkbs;
-                    }
-                    else if (activewkbs.Name == workbooknameTO)
-                    {
-                        wkbTo = activewkbs;
-                    }
-                }
+                Application xlappFrom = null;
+                Application xlappTo = null;
+                Worksheet sheetFrom = null;
+                Worksheet sheetTo = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbooknameFROM, visible, out wkbFrom, out xlappFrom, out sheetFrom);
+                instance.Instance(workbooknameTO, visible, out wkbTo, out xlappTo, out sheetTo);
+              
 
                 if (wkbFrom != null && wkbTo != null)
                 {
-                    Excel.Worksheet sheet = (Excel.Worksheet)wkbFrom.ActiveSheet;
 
-                    sheet.Copy(wkbTo.Worksheets[1]);
+                    sheetFrom.Copy(wkbTo.Worksheets[1]);
 
                     return "Object copied";
                 }
@@ -1847,20 +1578,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
 
                 Excel.PivotCaches pCaches = workbook.PivotCaches();
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 string worksheetname = sheet.Name;
                 string pivotdata = worksheetname + "!" + columnfrom + rowfrom + ":" + columnto + rowto;
                 Excel.Worksheet sheet2 = workbook.Worksheets.Add();
@@ -1919,20 +1643,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-               
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+
                 Excel.PivotCaches pCaches = workbook.PivotCaches();
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Excel.PivotTable pivot = (Excel.PivotTable)sheet.PivotTables(pivotname);
                 Excel.PivotField pivotfield = pivot.PivotFields(filterfield);
@@ -1965,19 +1682,12 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.PivotCaches pCaches = workbook.PivotCaches();
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Excel.PivotTable pivot = (Excel.PivotTable)sheet.PivotTables(pivotname);
                 Excel.PivotField pivotfield = pivot.PivotFields(filterfield);
@@ -2011,22 +1721,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 range.AutoFilter(filtercolumn, filterlist,
@@ -2046,21 +1748,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
 
@@ -2078,22 +1772,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
 
                 range.Interior.Color = System.Drawing.ColorTranslator.FromHtml(color);
@@ -2111,21 +1797,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Excel.Range MyRange = sheet.get_Range(rngFrom, rngTo);
 
@@ -2158,24 +1836,17 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
                 if (format == "@")
                 {
                     Array fieldInfoArray = new int[,] { { 1, 2 } };
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                     //Select cells in a range
 
                     Excel.Range range = sheet.get_Range(rngFrom, rngTo);
@@ -2197,7 +1868,7 @@ namespace ExcelDataManipulation
                 }
                 else
                 {
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
 
                     Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                     range.TextToColumns();
@@ -2219,21 +1890,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
                 range.SpecialCells(XlCellType.xlCellTypeVisible).Select();
@@ -2250,24 +1913,16 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
                 Excel.Range rngsortFrom = xlapp.Cells[rowfrom, sortcolumnnumber];
                 Excel.Range rngsortTo = xlapp.Cells[rowto, sortcolumnnumber];
 
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 //Select cells in a range
 
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
@@ -2300,7 +1955,8 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
+
+                Application xlapp = new Application();
                 xlapp.DisplayAlerts = false;
                 xlapp.EnableEvents = false;
                 if (visible == "yes" || visible == "Yes" || visible == "YES")
@@ -2326,20 +1982,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                xlapp.EnableEvents = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range range = sheet.Cells[row, column];
 
                 var obj = xlapp.ActiveSheet.OLEObjects.Add(Filename: filepath,
@@ -2370,21 +2017,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
                 Excel.Range rngTo = xlapp.Cells[rowto, column];
 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Excel.Range rng = xlapp.get_Range(rngFrom, rngFrom);
 
@@ -2404,21 +2044,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 Excel.Range range = sheet.get_Range(rngFrom, rngTo);
 
                 foreach (var item in filterlist)
@@ -2439,21 +2072,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Range range = sheet.get_Range(rngFrom, rngTo);
 
@@ -2472,19 +2097,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
- 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
 
                 Excel.Range range = (Excel.Range)sheet.Columns[columnfrom + ":" + columnto];
 
@@ -2504,21 +2121,14 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Range range = sheet.get_Range(rngFrom, rngTo);
 
@@ -2538,21 +2148,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Range range = sheet.get_Range(rngFrom, rngTo);
 
@@ -2571,21 +2173,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
                 Range range = sheet.get_Range(rngFrom, rngTo);
 
@@ -2603,19 +2197,12 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
- 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+
                 while (sheet.Cells[rowstart +1, column].value != null || sheet.Cells[rowstart +2, column].value != null)
                 {
                     ++rowstart;
@@ -2639,19 +2226,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
 
                 while (sheet.Cells[row, columnstart + 1].value != null || sheet.Cells[row, columnstart + 2].value != null)
                 {
@@ -2674,20 +2253,13 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 int columncount = 0;
 
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 columncount = sheet.UsedRange.Columns.Count;
                 Range lastcolumn = xlapp.Cells[row, columncount];
                 lastcolumn.Select();
@@ -2705,19 +2277,12 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 int rowcount = 0;
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                 rowcount = sheet.UsedRange.Rows.Count;
                 Range lastrow = xlapp.Cells[rowcount, column];
                 lastrow.Select();
@@ -2735,17 +2300,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 workbook.Close(true);
                 return "Workbook found";
             }
@@ -2760,17 +2319,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 workbook.Close(false);
                 return "Workbook found";
             }
@@ -2798,7 +2351,7 @@ namespace ExcelDataManipulation
         }
         #endregion
         #region CREATE EXCEL WORKBOOK
-        public string CreateExcelWrokbook(string workbookname, string visible)
+        public string CreateExcelWorkbook(string workbookname, string visible)
         {
             try
             {
@@ -2826,28 +2379,118 @@ namespace ExcelDataManipulation
             }
         }
         #endregion
+        #region LOOP THROUGH ALL ROWS IN 1 COLUMN AND SET 3 CELLS
+        public string Search1ValuesIn1ColumnsSet3Cells(string workbookname, string visible, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, int setcolumn1, string setvalue1, int setcolumn2, string setvalue2, int setcolumn3, string setvalue3)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                //Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+
+                List<string> returnlist = new List<string> { };
+                //Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
+
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                {
+                    string s1 = sheet.Cells[startrow, searchcolumn1].text;
+
+                    if (s1.Contains(searchvalue1))
+                    {
+                        if (setvalue1 != "")
+                        {
+                            sheet.Cells[startrow, setcolumn1].value = setvalue1;
+                        }
+                        if (setvalue2 != "")
+                        {
+                            sheet.Cells[startrow, setcolumn2].value = setvalue2;
+                        }
+                        if (setvalue3 != "")
+                        {
+                            sheet.Cells[startrow, setcolumn3].value = setvalue3;
+                        }
+
+                    }
+                    ++startrow;
+                }
+
+
+                return "Excel found";
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                return exc;
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL ROWS IN 2 COLUMNS AND SET 3 CELLS
+        public string Search2ValuesIn2ColumnsSet3Cells(string workbookname, string visible, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, string searchvalue2, int searchcolumn2, int setcolumn1, string setvalue1, int setcolumn2, string setvalue2, int setcolumn3, string setvalue3)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+
+                List<string> returnlist = new List<string> { };
+
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                {
+                    string s1 = sheet.Cells[startrow, searchcolumn1].text;
+                    string s2 = sheet.Cells[startrow, searchcolumn2].text;
+
+                    if (s1.Contains(searchvalue1) && s2.Contains(searchvalue2))
+                    {
+                        if (setvalue1 != "")
+                        {
+                            sheet.Cells[startrow, setcolumn1].value = setvalue1;
+                        }
+                        if (setvalue2 != "")
+                        {
+                            sheet.Cells[startrow, setcolumn2].value = setvalue2;
+                        }
+                        if (setvalue3 != "")
+                        {
+                            sheet.Cells[startrow, setcolumn3].value = setvalue3;
+                        }
+
+                    }
+                    ++startrow;
+                }
+
+
+                return "Excel found";
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                return exc;
+            }
+        }
+        #endregion
         #region LOOP THROUGH ROWS IN COLUMN AND CHECK IF CELL CONTAINS STRING
         public List<string> Search1ValueIn1Column(string workbookname, string visible, int loopcolumn, int startrow, string searchvalue, int searchcolumn)
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue = null;
                 string celladress = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
                 {
                     string s = sheet.Cells[startrow, searchcolumn].text;
 
@@ -2880,25 +2523,18 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
                 string celladress2 = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
                 {
                     string s1 = sheet.Cells[startrow, searchcolumn1].text;
                     string s2 = sheet.Cells[startrow, searchcolumn2].text;
@@ -2932,22 +2568,137 @@ namespace ExcelDataManipulation
             }
         }
         #endregion
+        #region LOOP THROUGH ALL ROWS IN 1 COLUMN AND GET 3 CELLS
+        public List<string> Search1ValuesIn1ColumnsAll(string workbookname, string visible, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, int getcolumn1, int getcolumn2, int getcolumn3)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                string cellvalue = null;
+
+                List<string> returnlist = new List<string> { };
+
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                {
+                    string s1 = sheet.Cells[startrow, searchcolumn1].text;
+
+                    if (s1.Contains(searchvalue1))
+                    {
+                        cellvalue = sheet.Cells[startrow, getcolumn1].text;
+                        returnlist.Add(cellvalue);
+                        cellvalue = sheet.Cells[startrow, getcolumn2].text;
+                        returnlist.Add(cellvalue);
+                        cellvalue = sheet.Cells[startrow, getcolumn3].text;
+                        returnlist.Add(cellvalue);
+
+                    }
+                    ++startrow;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL ROWS IN 1 ROW AND GET ALL VALUES
+        public List<string> LoopThroughRows(string workbookname, string visible, int loopcolumn, int startrow)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                string cellvalue = null;
+
+                List<string> returnlist = new List<string> { };
+
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                {
+                    cellvalue = sheet.Cells[startrow, loopcolumn].text;
+                    returnlist.Add(cellvalue);
+                   
+                    ++startrow;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL ROWS IN 2 COLUMN AND GET 3 CELLS
+        public List<string> Search2ValuesIn2ColumnsAll(string workbookname, string visible, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, string searchvalue2, int searchcolumn2, int getcolumn1, int getcolumn2, int getcolumn3)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                string cellvalue = null;
+
+                List<string> returnlist = new List<string> { };
+
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                {
+                    string s1 = sheet.Cells[startrow, searchcolumn1].text;
+                    string s2 = sheet.Cells[startrow, searchcolumn2].text;
+
+                    if (s1.Contains(searchvalue1) && s2.Contains(searchvalue2))
+                    {
+                        cellvalue = sheet.Cells[startrow, getcolumn1].text;
+                        returnlist.Add(cellvalue);
+                        cellvalue = sheet.Cells[startrow, getcolumn2].text;
+                        returnlist.Add(cellvalue);
+                        cellvalue = sheet.Cells[startrow, getcolumn3].text;
+                        returnlist.Add(cellvalue);
+
+                    }
+                    ++startrow;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
         #region LOOP THROUGH ROWS IN 3 COLUMNS AND CHECK IF CELL CONTAINS STRING
         public List<string> Search3ValuesIn3Columns(string workbookname, string visible, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, string searchvalue2, int searchcolumn2, string searchvalue3, int searchcolumn3)
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -2955,9 +2706,8 @@ namespace ExcelDataManipulation
                 string cellvalue3 = null;
                 string celladress3 = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
                 {
                     string s1 = sheet.Cells[startrow, searchcolumn1].text;
                     string s2 = sheet.Cells[startrow, searchcolumn2].text;
@@ -2997,22 +2747,16 @@ namespace ExcelDataManipulation
             }
         }
         #endregion
-        #region LOOP THROUGH ROWS IN 3 COLUMNS AND CHECK IF CELL CONTAINS STRING
+        #region LOOP THROUGH ROWS IN 4 COLUMNS AND CHECK IF CELL CONTAINS STRING
         public List<string> Search4ValuesIn4Columns(string workbookname, string visible, int loopcolumn, int startrow, string searchvalue1, int searchcolumn1, string searchvalue2, int searchcolumn2, string searchvalue3, int searchcolumn3, string searchvalue4, int searchcolumn4)
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -3022,9 +2766,8 @@ namespace ExcelDataManipulation
                 string cellvalue4 = null;
                 string celladress4 = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
                 {
                     string s1 = sheet.Cells[startrow, searchcolumn1].text;
                     string s2 = sheet.Cells[startrow, searchcolumn2].text;
@@ -3075,23 +2818,16 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue = null;
                 string celladress = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
+                while (sheet.Cells[looprow, startcolumn].value != null || sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
                 {
                     string s = sheet.Cells[searchrow, startcolumn].text;
 
@@ -3124,25 +2860,18 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
                 string celladress2 = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
+                while (sheet.Cells[looprow, startcolumn ].value != null || sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
                 {
                     string s1 = sheet.Cells[searchrow1, startcolumn].text;
                     string s2 = sheet.Cells[searchrow2, startcolumn].text;
@@ -3176,22 +2905,94 @@ namespace ExcelDataManipulation
             }
         }
         #endregion
+        #region LOOP THROUGH ALL COLUMNS IN 1 ROW AND GET 3 CELLS
+        public List<string> Search2ValuesIn2RowsAll(string workbookname, string visible, int looprow, int startcolumn, string searchvalue1, int searchrow1, string searchvalue2, int searchrow2, int getcolumn1, int getcolumn2, int getcolumn3)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                string cellvalue1 = null;
+                string cellvalue2 = null;
+                string cellvalue3 = null;
+                List<string> returnlist = new List<string> { };
+
+                while (sheet.Cells[looprow, startcolumn ].value != null || sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
+                {
+                    string s1 = sheet.Cells[searchrow1, startcolumn].text;
+                    string s2 = sheet.Cells[searchrow2, startcolumn].text;
+
+                    if (s1.Contains(searchvalue1) && s2.Contains(searchvalue2))
+                    {
+                        cellvalue1 = sheet.Cells[searchrow1, getcolumn1].text;
+                        cellvalue2 = sheet.Cells[searchrow1, getcolumn2].text;
+                        cellvalue3 = sheet.Cells[searchrow1, getcolumn3].text;
+                        returnlist.Add(cellvalue1);
+                        returnlist.Add(cellvalue2);
+                        returnlist.Add(cellvalue3);
+                        
+                    }
+                    ++startcolumn;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL COLUMNS IN 1 ROW AND GET ALL VALUES
+        public List<string> LoopThroughColumns(string workbookname, string visible, int looprow, int startcolumn)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                string cellvalue1 = null;
+                List<string> returnlist = new List<string> { };
+
+                while (sheet.Cells[looprow, startcolumn].value != null || sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
+                {
+                    cellvalue1 = sheet.Cells[looprow, startcolumn].text;
+                    returnlist.Add(cellvalue1);
+
+                    ++startcolumn;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
         #region LOOP THROUGH COLUMNS IN 3 ROWS AND CHECK IF CELL CONTAINS STRING
         public List<string> Search3ValuesIn3Rows(string workbookname, string visible, int looprow, int startcolumn, string searchvalue1, int searchrow1, string searchvalue2, int searchrow2, string searchvalue3, int searchrow3)
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -3199,9 +3000,8 @@ namespace ExcelDataManipulation
                 string cellvalue3 = null;
                 string celladress3 = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
+                while (sheet.Cells[looprow, startcolumn ].value != null || sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
                 {
                     string s1 = sheet.Cells[searchrow1, startcolumn].text;
                     string s2 = sheet.Cells[searchrow2, startcolumn].text;
@@ -3246,17 +3046,11 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                xlapp.DisplayAlerts = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -3266,9 +3060,8 @@ namespace ExcelDataManipulation
                 string cellvalue4 = null;
                 string celladress4 = null;
                 List<string> returnlist = new List<string> { };
-                Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
 
-                while (sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
+                while (sheet.Cells[looprow, startcolumn ].value != null || sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
                 {
                     string s1 = sheet.Cells[searchrow1, startcolumn].text;
                     string s2 = sheet.Cells[searchrow2, startcolumn].text;
@@ -3314,6 +3107,64 @@ namespace ExcelDataManipulation
             }
         }
         #endregion
+        #region LOOP 1 COLUMN AND GET HEADER NAME OF A COLUMN THAT HAS SPECIFIC VALUE IN IT
+        public List<string> Loop1ColumnAndGetHeaderNameOfColumnWithSpecificValue(string workbookname, string visible, int loopcolumn, int startrow, int looprow, int startcolumn, string searchvalue, int headerrow)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                string cellvalue = null;
+                long lastrow;
+                long lastcolumn;
+                List<string> returnlist = new List<string> { };
+
+                lastrow = startrow;
+                while (sheet.Cells[lastrow + 1, loopcolumn].value != null || sheet.Cells[lastrow + 2, loopcolumn].value != null)
+                {
+                    ++lastrow;
+                }
+
+                lastcolumn = startcolumn;
+                while (sheet.Cells[looprow, lastcolumn + 1].value != null || sheet.Cells[looprow, lastcolumn + 2].value != null)
+                {
+                    ++lastcolumn;
+                }
+
+
+                while (sheet.Cells[startrow, loopcolumn].value != null || sheet.Cells[startrow + 1, loopcolumn].value != null || sheet.Cells[startrow + 2, loopcolumn].value != null)
+                {
+
+                    cellvalue = sheet.Cells[startrow, loopcolumn].text;
+                    returnlist.Add(cellvalue);
+                    for (int i = 1; i <= lastcolumn; i++)
+                    {
+                        cellvalue = sheet.Cells[startrow, i].text;
+                        if (cellvalue == searchvalue)
+                        {
+                            returnlist.Add(sheet.Cells[headerrow, i].text);
+                        }
+                    }
+                    returnlist.Add("next record");
+
+                    ++startrow;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
 
         #region OBTAIN DATA FROM EXCEL
 
@@ -3322,15 +3173,18 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
+                string visible = "Yes";
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                ExcelInstance instance = new ExcelInstance();
+                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
                 string worksheetname = "Not found";
-            int? rowcount = 0;
-            int? columncount = 0;
-            int? worksheetcount = 0;
+                int? rowcount = 0;
+                int? columncount = 0;
+                int? worksheetcount = 0;
 
 
-                    Excel.Worksheet sheet = (Excel.Worksheet)workbook.ActiveSheet;
                     //Get worksheet name
                     worksheetname = sheet.Name;
                     //Get last used column count
