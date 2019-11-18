@@ -11,6 +11,7 @@ using System.Drawing;
 using Microsoft.Office.Interop.Excel;
 using System.Collections;
 using System.Diagnostics;
+using System.IO;
 
 namespace ExcelDataManipulation
 {
@@ -68,7 +69,7 @@ namespace ExcelDataManipulation
                         if (res >= 0)
                         {
                             app = window.Application;
-                            Console.WriteLine(app.Name);
+
                             try
                             {
                                 workbook = app.Workbooks.get_Item(workbookname);
@@ -124,18 +125,33 @@ namespace ExcelDataManipulation
             try
             {
                 string status = "Failed";
-                Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
+
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
                 xlapp.DisplayAlerts = false;
                 xlapp.EnableEvents = false;
-                Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 workbook.SaveAs(newfilenamefullpath);
 
                 foreach (Excel.Workbook wb in xlapp.Workbooks)
@@ -150,7 +166,101 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region SAVE WORKBOOK
+        public string SaveWorkbook(string workbookname, string visible)
+        {
+            try
+            {
+
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                workbook.Save();
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region SAVE CSV AS XLSX WORKBOOK
+        public string SaveCSVAsXlsx(string workbookname, string visible, string newfilenamefullpath = "")
+        {
+            try
+            {
+                string status = "Failed";
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
+                workbook.SaveAs(newfilenamefullpath, XlFileFormat.xlOpenXMLWorkbook, Type.Missing, Type.Missing, Type.Missing, Type.Missing, XlSaveAsAccessMode.xlExclusive, Type.Missing, Type.Missing, Type.Missing, Type.Missing, Type.Missing);
+
+                foreach (Excel.Workbook wb in xlapp.Workbooks)
+                {
+                    if ((workbook.Path + @"\" + workbook.Name) == newfilenamefullpath)
+                    {
+                        status = "Completed";
+                    }
+                }
+                return status;
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -163,8 +273,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
 
                 workbook.SaveAs(newfilenamefullpath, XlFileFormat.xlCSV);
 
@@ -180,7 +311,58 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region SAVE AS CSV
+        public string SaveAsTabDelimTXT(string workbookname, string visible, string newfilenamefullpath = "")
+        {
+            try
+            {
+                string status = "Failed";
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
+                workbook.SaveAs(newfilenamefullpath, XlFileFormat.xlTextWindows, Missing.Value, Missing.Value, Missing.Value, false, Microsoft.Office.Interop.Excel.XlSaveAsAccessMode.xlNoChange, Missing.Value, Missing.Value, Missing.Value, Missing.Value, Missing.Value);
+
+                foreach (Excel.Workbook wb in xlapp.Workbooks)
+                {
+                    if ((workbook.Path + @"\" + workbook.Name) == newfilenamefullpath)
+                    {
+                        status = "Completed";
+                    }
+                }
+                return status;
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -192,8 +374,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
 
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
@@ -209,7 +412,126 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region CHANGE ROW DATA TO HYPERLINKS
+        public string ChangeRowDataToHyperlinks(string workbookname, string visible, int column, int rowfrom, int rowto)
+        {
+            try
+            {
+                //Workbook workbook = null;
+                //Application xlapp = null;
+                //Worksheet sheet = null;
+                //ExcelInstance instance = new ExcelInstance();
+                string cellvalue = "";
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
+                Excel.Range rngTo = xlapp.Cells[rowto, column];
+
+
+                Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+
+                foreach (var item in range)
+                {
+                    cellvalue = sheet.Cells[rowfrom, column].text;
+                    sheet.Hyperlinks.Add(item, cellvalue, Type.Missing, cellvalue, cellvalue);
+                    rowfrom++;
+                }
+
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region CHANGE COLUMN DATA TO HYPERLINKS
+        public string ChangeColumnDataToHyperlinks(string workbookname, string visible, int row, int columnfrom, int columnto)
+        {
+            try
+            {
+                //Workbook workbook = null;
+                //Application xlapp = null;
+                //Worksheet sheet = null;
+                //ExcelInstance instance = new ExcelInstance();
+                string cellvalue = "";
+
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                Excel.Range rngFrom = xlapp.Cells[row, columnfrom];
+                Excel.Range rngTo = xlapp.Cells[row, columnto];
+
+
+                Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+
+                foreach (var item in range)
+                {
+                    cellvalue = sheet.Cells[row, columnfrom].text;
+                    sheet.Hyperlinks.Add(item, cellvalue, Type.Missing, cellvalue, cellvalue);
+                    columnfrom++;
+                }
+
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -221,8 +543,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
 
                 //Select cells in a range
                 sheet.Cells[row, column] = insertdata;
@@ -233,7 +575,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -245,8 +587,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
 
                 return sheet.Cells[row, column].text;
 
@@ -254,7 +616,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -266,8 +628,30 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -281,7 +665,59 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region CONVERT RANGE INTO TABLE
+        public string ConvertRangeIntoTable(string workbookname, string visible, int columnfrom, int rowfrom, int columnto, int rowto)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
+                Excel.Range rngTo = xlapp.Cells[rowto, columnto];
+
+                //Select cells in a range
+
+                Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                range.Worksheet.ListObjects.AddEx(
+                        SourceType: Excel.XlListObjectSourceType.xlSrcRange,
+                        Source: range,
+                        XlListObjectHasHeaders: Excel.XlYesNoGuess.xlYes);
+                return "Workbook found";
+
+
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -293,8 +729,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
+
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.Copy();
@@ -304,7 +761,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -316,8 +773,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 range.Copy();
@@ -327,7 +805,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -339,8 +817,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 range.Copy();
@@ -351,7 +850,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -363,8 +862,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Columns[columnfrom + ":" + columnfrom];
                 rangefrom.Copy();
@@ -377,7 +897,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -389,8 +909,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Rows[rowfrom + ":" + rowfrom];
                 rangefrom.Copy();
@@ -403,7 +944,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -415,8 +956,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Columns[columnfrom + ":" + columnfrom];
                 rangefrom.Copy();
@@ -428,7 +990,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
 }
         #endregion
@@ -440,8 +1002,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cells in a range
                 Excel.Range rangefrom = (Excel.Range)sheet.Rows[rowfrom + ":" + rowfrom];
                 rangefrom.Copy();
@@ -452,7 +1035,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -465,8 +1048,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cell
                 Excel.Range range = sheet.Cells[row, column];
                 //Enter forumla
@@ -478,7 +1082,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -491,8 +1095,30 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
                 //Select cells in a range
@@ -504,7 +1130,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -516,8 +1142,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
+
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.Replace(oldstring, newstring);
@@ -528,7 +1175,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -541,8 +1188,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -556,7 +1224,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -568,8 +1236,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
+
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.Font.Bold = true;
@@ -579,7 +1268,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -592,8 +1281,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.PasteSpecial(Excel.XlPasteType.xlPasteValues);
@@ -604,7 +1313,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -616,8 +1325,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Select cell
                 Excel.Range range = sheet.Cells[row, column];
                 //Enter forumla
@@ -628,7 +1358,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -640,8 +1370,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
+
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 range.PasteSpecial();
@@ -652,7 +1403,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -664,8 +1415,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select cell
                 Excel.Range range = sheet.Cells[row, column];
                 //Enter forumla
@@ -677,7 +1448,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -690,8 +1461,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Select blank cells in a range
@@ -706,7 +1497,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -718,8 +1509,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
                 Excel.Range rngTo = xlapp.Cells[rowto, column];
 
@@ -735,7 +1546,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -747,8 +1558,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Select blank cells in a range
@@ -763,7 +1594,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -775,8 +1606,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Select blank cells in a range
@@ -790,7 +1641,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -803,8 +1654,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Select blank cells in a range
@@ -818,7 +1689,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -830,8 +1701,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
                 Excel.Range rngTo = xlapp.Cells[rowto, column];
 
@@ -848,7 +1739,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -860,8 +1751,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Select blank cells of column
@@ -875,7 +1786,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -888,8 +1799,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+ 
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Select blank cells in a range
@@ -903,7 +1834,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -915,8 +1846,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 Excel.Range rngFrom = xlapp.Cells[row, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[row, columnto];
 
@@ -933,7 +1884,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -945,8 +1896,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Select blank cells in a range
@@ -960,7 +1931,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -974,8 +1945,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete selected rows
@@ -987,7 +1978,105 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region DELETE ROWS OF SPECIFIC ROWS IN RANGE
+        public string DeleteRowsOfSpecificColumn(string workbookname, string visible, int column, int rowfrom, int rowto)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+                Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
+                Excel.Range rngTo = xlapp.Cells[rowto, column];
+
+                //Set Range
+                Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+
+                //Delete selected rows
+                range.EntireRow.Delete();
+                return "Workbook found";
+
+
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region DELETE COLUMNS OF SPECIFIC ROW IN RANGE
+        public string DeleteColumnsOfSpecificRange(string workbookname, string visible, int row, int columnfrom, int columnto)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+                Excel.Range rngFrom = xlapp.Cells[row, columnfrom];
+                Excel.Range rngTo = xlapp.Cells[row, columnto];
+
+                //Set Range
+                Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+
+                //Delete selected rows
+                range.EntireColumn.Delete();
+                return "Workbook found";
+
+
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -999,8 +2088,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+  
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete selected rows
@@ -1012,7 +2121,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1024,8 +2133,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 //Create object from selection
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete selected rows
@@ -1037,7 +2166,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1049,8 +2178,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -1065,7 +2214,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1078,8 +2227,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Select row
@@ -1091,7 +2260,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1103,8 +2272,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Delete blank cells rows
@@ -1116,7 +2305,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1129,8 +2318,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 //Select cells in a range
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete blank cells rows
@@ -1142,7 +2351,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1154,8 +2363,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Delete blank cells rows
@@ -1167,7 +2396,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1179,8 +2408,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 //Select column
                 Excel.Range range = xlapp.ActiveWindow.Selection;
                 //Delete blank cells rows
@@ -1192,7 +2441,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1204,8 +2453,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Delete blank cells rows
@@ -1217,7 +2486,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1238,9 +2507,55 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
 
+        }
+        #endregion
+        #region GET SHEET NAME BY INDEX
+        public string GetSheetNameByIndex(string workbookname, int sheetindex)
+        {
+            try
+            {
+                string visible = "yes";
+                ExcelMBOT obj = new ExcelMBOT();
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                Excel.Sheets sheets = workbook.Worksheets;
+                Excel.Worksheet worksheet = (Excel.Worksheet)sheets.get_Item(sheetindex);//Get the reference of worksheet
+
+                return worksheet.Name.ToString();
+
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
         }
         #endregion
 
@@ -1260,7 +2575,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1273,17 +2588,78 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet, sheetname);
-                sheet.Select();
-                sheet.Activate();
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Worksheets[sheetname].Activate();
+
                 return "Workbook found";
 
             }
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region ACTIVATE SHEET BY INDEX
+        public string ActivateSheetByIndex(string workbookname, string visible, string sheetindex)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+                Excel.Sheets sheets = workbook.Worksheets;
+                Excel.Worksheet worksheet = (Excel.Worksheet)sheets.get_Item(sheetindex);//Get the reference of worksheet
+
+                worksheet.Activate();
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1303,7 +2679,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1323,7 +2699,51 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region GET ROW COUNT USING SPECIAL CELLS
+        public string GetRowsCountSpecCell(string workbookname)
+        {
+            try
+            {
+                string visible = "yes";
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+                Excel.Range last = sheet.Cells.SpecialCells(Excel.XlCellType.xlCellTypeLastCell, Type.Missing);
+                var result = last.Row;
+
+                return result.ToString();
+
+            }
+            catch (Exception e)
+            {
+
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1343,7 +2763,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1352,11 +2772,33 @@ namespace ExcelDataManipulation
         {
             try
             {
+
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
 
 
                 while (sheet.Cells[rowstart +1, column].value != null || sheet.Cells[rowstart +2, column].value != null)
@@ -1372,7 +2814,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1384,8 +2826,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select column
 
                 while (sheet.Cells[row, columnstart +1].value != null || sheet.Cells[row, columnstart +2].value != null)
@@ -1400,7 +2863,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1413,8 +2876,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select column
                 Excel.Range range = (Excel.Range)sheet.Columns[column + ":" + column];
                 //Autofit column
@@ -1427,7 +2911,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1439,8 +2923,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Select cells in a range
                 Excel.Range range = (Excel.Range)sheet.Rows[row + ":" + row];
                 //Autofit row
@@ -1452,7 +2957,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1464,8 +2969,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 //Delete sheet
                 sheet.Delete();
                 return "Workbook found";
@@ -1475,7 +3001,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1493,8 +3019,30 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 //Find all open workbooks and add their names to the list
                 foreach (Excel.Workbook activewkbs in xlapp.Workbooks)
                 {
@@ -1531,31 +3079,42 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
 
         }
         #endregion
         #region COPY SHEET TO SPECIFIC WORKBOOK
-        public string CopySheetToSpecificWorkbook(string workbooknameFROM, string workbooknameTO, string visible)
+        public string CopySheetToSpecificWorkbook(string workbooknameFROM, string workbooknameTO, string visible, string sheetname)
         {
             try
             {
                 Excel.Workbook wkbFrom = null;
                 Excel.Workbook wkbTo = null;
-                Application xlappFrom = null;
-                Application xlappTo = null;
-                Worksheet sheetFrom = null;
-                Worksheet sheetTo = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbooknameFROM, visible, out wkbFrom, out xlappFrom, out sheetFrom);
-                instance.Instance(workbooknameTO, visible, out wkbTo, out xlappTo, out sheetTo);
+                Application xlapp = null;
+
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                }
+                catch (Exception)
+                {
+                    xlapp = new Application();
+                }
+
+                //Application xlapp = new Application();
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                xlapp.Visible = true;
+
+                wkbFrom = xlapp.Workbooks.Open(workbooknameFROM, false, false);
+                wkbTo = xlapp.Workbooks.Open(workbooknameTO, false, false);
               
 
                 if (wkbFrom != null && wkbTo != null)
                 {
 
-                    sheetFrom.Copy(wkbTo.Worksheets[1]);
+                    wkbFrom.Sheets[sheetname].Copy(wkbTo.Worksheets[1]);
 
                     return "Object copied";
                 }
@@ -1568,21 +3127,139 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
+        #region GET COLUMN INDEX
+        public string GetColumnIndex(string xladdress)
+        {
+            string output = "";
+            try
+            {
 
+                int columnindex = 0;
+                int cut = 0;
+                string columnlabel = "";
+                char a = Convert.ToChar(xladdress.Substring(0, 1).ToUpper());
+                if ((int)a >= 65 & (int)a <= 90)
+                {
+                    //Set the length of the substring to whole string in case only column label is passed
+                    cut = xladdress.Length;
+                    for (int i = 1; i < xladdress.Length; i++)
+                    {
+                        string s = xladdress.Substring(i, 1);
+                        char c = Convert.ToChar(s);
+                        int tempascii = (int)c;
+                        if (tempascii >= 48 & tempascii <= 57)
+                        {
+                            cut = i;
+                            break;
+                        }
+                    }
+                    columnlabel = xladdress.Substring(0, cut);
+                    // Process each letter.
+                    for (int i = 0; i < columnlabel.Length; i++)
+                    {
+                        columnindex *= 26;
+                        char letter = Convert.ToChar(columnlabel[i].ToString().ToUpper());
+
+                        // See if it's out of bounds.
+                        if (letter < 'A') letter = 'A';
+                        if (letter > 'Z') letter = 'Z';
+
+                        // Add in the value of this letter.
+                        columnindex += (int)letter - (int)'A' + 1;
+                    }
+                    output = columnindex.ToString();
+                }
+                else
+                {
+                    output = "<#EXCEL INTEGRATION MBOT FAILED#> The string passed to function does not begin with a letter";
+                }
+            }
+            catch (Exception e)
+            {
+                output = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.Message;
+            }
+            return output;
+        }
+        #endregion
+        # region GET ACTIVE WORKBOOK NAME
+        public string GetActiveExcelWbkName()
+        {
+            string output = "";
+            string wb_name = "";
+            try
+            {
+
+                int wbk_count = 0;
+                Microsoft.Office.Interop.Excel.Application XL = null;
+
+                XL = (Microsoft.Office.Interop.Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                foreach (Microsoft.Office.Interop.Excel.Workbook wb in XL.Workbooks)
+                {
+                    if (wb.FullName.ToLower().Contains(@"\appdata\roaming\microsoft\excel\xlstart\"))
+                    {
+
+                    }
+                    else
+                    {
+                        wbk_count++;
+                        wb_name = wb.Name;
+                    }
+
+                }
+                if (wbk_count > 1)
+                {
+                    output = "<#EXCEL INTEGRATION MBOT FAILED#> More than one open workbook";
+                }
+                else
+                {
+                    output = wb_name;
+                }
+
+            }
+            catch (Exception e)
+            {
+
+                output = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.Message;
+            }
+
+            return output;
+        }
+
+        #endregion
         #region CREATE PIVOT IN NEW TAB
-        public string CreatePivotTableInNewTab(string workbookname, string visible, string columnfrom, int rowfrom, string columnto, int rowto, string newsheetname, string pivotname, string pivotcelldesticnation, string[] rowfieldlist = null, string[] columnfieldlist = null, string[] valuefieldlist = null, string[] filterfieldlist = null)
+        public string CreatePivotTableInNewTab(string workbookname, string visible, string columnfrom, int rowfrom, string columnto, int rowto, string newsheetname, string pivotname, string pivotcelldesticnation, string pivotlayout, string pivotrowsubtotals, string pivotcolumnsubtotals, string repeatlabels, string removesubtotals, string[] rowfieldlist = null, string[] columnfieldlist = null, string[] valuefieldlist = null, string[] filterfieldlist = null)
         {
             try
             {
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
 
                 Excel.PivotCaches pCaches = workbook.PivotCaches();
                 string worksheetname = sheet.Name;
@@ -1593,19 +3270,71 @@ namespace ExcelDataManipulation
                 Excel.Range rngDes = sheet2.get_Range(pivotcelldesticnation);
                 //Send range to cache and use it to create pivot
                 Excel.PivotCache cache = pCaches.Create(Excel.XlPivotTableSourceType.xlDatabase, pivotdata, Excel.XlPivotTableVersionList.xlPivotTableVersion14);
-                //Excel.PivotTable pTable = cache.CreatePivotTable(TableDestination: rngDes, TableName: pivotname, DefaultVersion: Excel.XlPivotTableVersionList.xlPivotTableVersion14);
                 Excel.PivotTable pTable = cache.CreatePivotTable(TableDestination: rngDes, TableName: "PivotTable1", DefaultVersion: Excel.XlPivotTableVersionList.xlPivotTableVersion14);
 
 
-                if (rowfieldlist != null)
+                if (rowfieldlist != null && rowfieldlist[0].ToString() != "" && rowfieldlist[0].ToString() != null)
                 {
                     foreach (var rowfield in rowfieldlist)
                     {
                         pTable.PivotFields(rowfield).Orientation = Excel.XlPivotFieldOrientation.xlRowField;
+
+                        if (removesubtotals == "true")
+                        {
+                            ((Excel.PivotField)pTable.PivotFields(rowfield)).set_Subtotals(1, false);
+                        }
                     }
                 }
 
-                if (columnfieldlist != null)
+                if (pivotlayout == "compact")
+                {
+                    pTable.RowAxisLayout(Excel.XlLayoutRowType.xlCompactRow);
+                }
+                else if (pivotlayout == "outline")
+                {
+                    pTable.RowAxisLayout(Excel.XlLayoutRowType.xlOutlineRow);
+                }
+                else if (pivotlayout == "tabular")
+                {
+                    pTable.RowAxisLayout(Excel.XlLayoutRowType.xlTabularRow);
+                }
+                else
+                {
+                    return "Pivot layout type incorrect. Options: compact, outline, tabular";
+                }
+
+                if (pivotrowsubtotals == "true")
+                {
+                    pTable.RowGrand = true;
+                }
+                else if (pivotrowsubtotals == "false")
+                {
+                    pTable.RowGrand = false;
+                }
+                else
+                {
+                    return "Row subtotal incorrect. Options: true, false";
+                }
+
+
+                if (pivotcolumnsubtotals == "true")
+                {
+                    pTable.ColumnGrand = true;
+                }
+                else if (pivotcolumnsubtotals == "false")
+                {
+                    pTable.ColumnGrand = false;
+                }
+                else
+                {
+                    return "Column subtotal incorrect. Options: true, false";
+                }
+                if (repeatlabels == "true")
+                {
+                    pTable.RepeatAllLabels(Excel.XlPivotFieldRepeatLabels.xlRepeatLabels);
+                }
+
+                if (columnfieldlist != null && columnfieldlist[0].ToString() != "" && columnfieldlist[0].ToString() != null)
                 {
                     foreach (var columnfield in columnfieldlist)
                     {
@@ -1613,7 +3342,7 @@ namespace ExcelDataManipulation
                     }
                 }
 
-                if (valuefieldlist != null)
+                if (valuefieldlist != null && valuefieldlist[0].ToString() != "" && valuefieldlist[0].ToString() != null)
                 {
                     foreach (var valuefield in valuefieldlist)
                     {
@@ -1621,7 +3350,7 @@ namespace ExcelDataManipulation
                     }
                 }
 
-                if (filterfieldlist != null)
+                if (filterfieldlist != null && filterfieldlist[0].ToString() != "" && filterfieldlist[0].ToString() != null)
                 {
                     foreach (var filterfield in filterfieldlist)
                     {
@@ -1629,12 +3358,11 @@ namespace ExcelDataManipulation
                     }
                 }
 
-
                 return pTable.Name + " created";
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1646,8 +3374,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
 
                 Excel.PivotCaches pCaches = workbook.PivotCaches();
 
@@ -1673,7 +3421,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1685,8 +3433,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
                 Excel.PivotCaches pCaches = workbook.PivotCaches();
 
                 Excel.PivotTable pivot = (Excel.PivotTable)sheet.PivotTables(pivotname);
@@ -1711,7 +3479,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1724,8 +3492,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -1739,7 +3528,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1751,8 +3540,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -1763,7 +3573,142 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region CALCULATE WORKBOOK
+        public string CalculateWorkbook(string workbookname, string visible)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                workbook.Parent.Calculate();
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region CALCULATE SHEET
+        public string CalculateSheet(string workbookname, string visible)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                sheet.Calculate();
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region CHANGE EXCEL CALCULATION TYPE
+        public string ChangeExcelCalculationType(string workbookname, string visible, string calcType)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
+                if (calcType == "Manual" || calcType == "manual" || calcType == "MANUAL")
+                {
+                    xlapp.Calculation = XlCalculation.xlCalculationManual;
+                }
+                else if (calcType == "Automatic" || calcType == "automatic" || calcType == "AUTOMATIC")
+                {
+                    xlapp.Calculation = XlCalculation.xlCalculationAutomatic;
+                }
+                else if (calcType == "SemiAutomatic" || calcType == "Semiutomatic" || calcType == "SEMIAUTOMATIC" || calcType == "semiautomatic")
+                {
+                    xlapp.Calculation = XlCalculation.xlCalculationSemiautomatic;
+                }
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1775,8 +3720,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -1788,7 +3754,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1800,8 +3766,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -1827,8 +3814,92 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
+        }
+        #endregion
+        #region OPEN CSV FILE IN EXCEL
+        public string OpenCSVinExcel(string workbookname, string visible, string pathCSV, string delimiter = "")
+        {
+
+            try
+            {
+
+                //Workbook workbook = null;
+               // Application xlapp = null;
+                //Worksheet sheet = null;
+                //Array datatype = new Array[] {  };
+                int[] datatype = new int[] { 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2, 2 };
+
+
+                //ExcelInstance instance = new ExcelInstance();
+                //instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                Range destination = sheet.get_Range("A1");
+
+                sheet.QueryTables.Add("TEXT;" + Path.GetFullPath(pathCSV), destination, Type.Missing);
+                sheet.QueryTables[1].Name = Path.GetFileNameWithoutExtension(pathCSV);
+                sheet.QueryTables[1].FieldNames = true;
+                sheet.QueryTables[1].RowNumbers = false;
+                sheet.QueryTables[1].FillAdjacentFormulas = false;
+                sheet.QueryTables[1].PreserveFormatting = true;
+                sheet.QueryTables[1].RefreshOnFileOpen = false;
+                sheet.QueryTables[1].RefreshStyle = XlCellInsertionMode.xlInsertDeleteCells;
+                sheet.QueryTables[1].SavePassword = false;
+                sheet.QueryTables[1].SaveData = true;
+                sheet.QueryTables[1].AdjustColumnWidth = true;
+                sheet.QueryTables[1].RefreshPeriod = 0;
+                sheet.QueryTables[1].TextFilePromptOnRefresh = false;
+                sheet.QueryTables[1].TextFilePlatform = 437;
+                sheet.QueryTables[1].TextFileStartRow = 1;
+                sheet.QueryTables[1].TextFileParseType = XlTextParsingType.xlDelimited;
+                sheet.QueryTables[1].TextFileTextQualifier = XlTextQualifier.xlTextQualifierDoubleQuote;
+                sheet.QueryTables[1].TextFileConsecutiveDelimiter = false;
+                sheet.QueryTables[1].TextFileTabDelimiter = false;
+                sheet.QueryTables[1].TextFileSemicolonDelimiter = false;
+                sheet.QueryTables[1].TextFileCommaDelimiter = true;
+                sheet.QueryTables[1].TextFileSpaceDelimiter = false;
+                sheet.QueryTables[1].TextFileOtherDelimiter = "";
+                sheet.QueryTables[1].TextFileColumnDataTypes = datatype;
+
+                sheet.QueryTables[1].Refresh(false);
+
+                // cleanup
+                sheet.QueryTables[1].Delete();
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+
         }
         #endregion
         #region CHANGE FORMAT OF RANGE
@@ -1839,8 +3910,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -1855,8 +3947,8 @@ namespace ExcelDataManipulation
                     XlTextParsingType.xlDelimited,
                     XlTextQualifier.xlTextQualifierDoubleQuote,
                     true,        // Consecutive Delimiter
-                    Type.Missing,// Tab
-                    Type.Missing,// Semicolon
+                    false,// Tab
+                    false,// Semicolon
                     false,        // Comma
                     false,       // Space
                     false,// Other
@@ -1866,6 +3958,29 @@ namespace ExcelDataManipulation
                     Type.Missing,// Thousands Separator
                     Type.Missing);// Trailing Minus Numbers
                 }
+                else if (format == "General" || format == "general" || format == "GENERAL")
+                {
+                    Array fieldInfoArray = new int[,] { { 1, 1 } };
+                    //Select cells in a range
+
+                    Excel.Range range = sheet.get_Range(rngFrom, rngTo);
+                    range.NumberFormat = format;
+                    range.TextToColumns(range,
+                    XlTextParsingType.xlDelimited,
+                    XlTextQualifier.xlTextQualifierDoubleQuote,
+                    false,        // Consecutive Delimiter
+                    false,// Tab
+                    false,// Semicolon
+                    false,        // Comma
+                    false,       // Space
+                    false,// Other
+                    "",         // Other Char
+                    fieldInfoArray,// Field Info
+                    Type.Missing,// Decimal Separator
+                    Type.Missing,// Thousands Separator
+                    Type.Missing);// Trailing Minus Numbers
+                }
+
                 else
                 {
 
@@ -1881,7 +3996,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1893,8 +4008,30 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -1904,7 +4041,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -1916,8 +4053,30 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
                 Excel.Range rngsortFrom = xlapp.Cells[rowfrom, sortcolumnnumber];
@@ -1946,33 +4105,44 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
         #region OPEN SPREADSHEET
         public string OpenSpreadsheet(string workbookname, string visible, string path)
         {
+
+            Workbook workbook = null;
+            Worksheet sheet = null;
             try
             {
+                Application xlapp = null;
 
-                Application xlapp = new Application();
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                }
+                catch (Exception)
+                {
+                    xlapp = new Application();
+                }
+                xlapp.Visible = true;
+
                 xlapp.DisplayAlerts = false;
                 xlapp.EnableEvents = false;
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
-                xlapp.Workbooks.Open( path + workbookname ,false,false);
+
+                xlapp.Workbooks.Open(path + workbookname, false, false);
+                workbook = xlapp.Workbooks.get_Item(workbookname);
+                sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                workbook.Activate();
+                sheet.Activate();
+
                 return "Workbook found";
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
 
         }
@@ -1985,8 +4155,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range range = sheet.Cells[row, column];
 
                 var obj = xlapp.ActiveSheet.OLEObjects.Add(Filename: filepath,
@@ -2008,7 +4199,50 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+
+        #region INSERT PICTURE
+        public string InsertPicture(string workbookname, string visible, string filepath, int fromleft, int fromtop, int width, int height)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                sheet.Shapes.AddPicture(filepath, Microsoft.Office.Core.MsoTriState.msoFalse, Microsoft.Office.Core.MsoTriState.msoCTrue, fromleft, fromtop, width, height);
+
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2020,8 +4254,30 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, column];
                 Excel.Range rngTo = xlapp.Cells[rowto, column];
 
@@ -2035,7 +4291,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2047,8 +4303,29 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -2063,7 +4340,93 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region REMOVE FILTER FROM SHEET
+        public string RemoveFilter(string workbookname, string visible)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                sheet.AutoFilterMode = false;
+                sheet.ShowAllData();
+
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region CREATE SHEET IN WORKBOOK
+        public string CreateSheet(string workbookname, string visible, string sheetname, int sheetindex)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+                Worksheet newsheet = workbook.Worksheets.Add(Missing.Value, workbook.Worksheets[sheetindex]);
+
+                newsheet.Name = sheetname;
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2075,8 +4438,30 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                sheet.Select();
+
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -2088,7 +4473,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2100,8 +4485,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
 
                 Excel.Range range = (Excel.Range)sheet.Columns[columnfrom + ":" + columnto];
 
@@ -2112,7 +4517,63 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region REMOVE DUPLICATES FROM COLUMNS CHECKING SPECIFIC COLUMNS
+        public string RemoveDuplicatesFromColumnsSpecific(string workbookname, string visible, string columnfrom, string columnto, string checkcolumns)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
+                string[] stringList = checkcolumns.Split(",".ToCharArray(),
+                                  StringSplitOptions.RemoveEmptyEntries);
+
+
+                object[] list = new object[stringList.Length];
+
+                for (int i = 0; i < stringList.Length; i++)
+                {
+                    list[i] = Convert.ChangeType(stringList[i], typeof(int));
+                }
+
+                Excel.Range range = (Excel.Range)sheet.Columns[columnfrom + ":" + columnto];
+
+
+
+                range.RemoveDuplicates(list,
+                Excel.XlYesNoGuess.xlNo);
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2124,8 +4585,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -2139,8 +4620,61 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
+        }
+        #endregion
+        #region OPEN TXT FILE IN EXCEL
+        public string OpenTXTinExcel(string txtfilepath, string delimiter)
+        {
+
+            try
+            {
+                Application xlapp = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                }
+                catch (Exception)
+                {
+                    xlapp = new Application();
+                }
+
+
+                //Application xlapp = new Excel.Application();
+                xlapp.Visible = true;
+                Workbooks Workbook = (Excel.Workbooks)xlapp.Workbooks;
+                object delim = delimiter;
+
+                Workbook.OpenText
+                       (
+                           txtfilepath,
+                           XlPlatform.xlWindows, //Origin
+                           1,// Start Row
+                           XlTextParsingType.xlDelimited,//Datatype
+                           XlTextQualifier.xlTextQualifierNone,//TextQualifier
+                           false, // Consecutive Deliminators
+                           false, // tab
+                           false, // semicolon
+                           false, //COMMA
+                           false, // space
+                           true, // other
+                           delim, // Other Char
+                           Missing.Value, // FieldInfo
+                           Missing.Value, //TextVisualLayout
+                           Missing.Value, // DecimalSeparator
+                           Missing.Value, // ThousandsSeparator
+                           true, // TrialingMionusNumbers
+                           Missing.Value //Local
+                       );
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+
         }
         #endregion
         #region FIND VALUE IN RANGE AND GET ADRESS
@@ -2151,8 +4685,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                sheet.Activate();
+                sheet.Select();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -2164,7 +4718,47 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region GET ADRESS OF SPECIFIC CELL
+        public string GetAdressOfCell(string workbookname, string visible, int column, int row)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
+                Excel.Range cell = xlapp.Cells[row, column];
+
+                return cell.get_AddressLocal(false, false, Excel.XlReferenceStyle.xlA1).ToString();
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2176,8 +4770,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 Excel.Range rngFrom = xlapp.Cells[rowfrom, columnfrom];
                 Excel.Range rngTo = xlapp.Cells[rowto, columnto];
 
@@ -2188,7 +4802,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2200,8 +4814,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
 
                 while (sheet.Cells[rowstart +1, column].value != null || sheet.Cells[rowstart +2, column].value != null)
                 {
@@ -2217,7 +4850,51 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region GO TO SPECIFIC CELL BY ADDRESS
+        public string GoToCellByAddress(string workbookname, string visible, string celladress)
+        {
+            try
+            {
+
+
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                Excel.Range lastcell = xlapp.Range[celladress];
+
+                lastcell.Activate();
+                lastcell.Select();
+
+                return "Workbook found";
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2229,8 +4906,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
 
                 while (sheet.Cells[row, columnstart + 1].value != null || sheet.Cells[row, columnstart + 2].value != null)
                 {
@@ -2244,7 +4940,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2256,8 +4952,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 int columncount = 0;
 
                 columncount = sheet.UsedRange.Columns.Count;
@@ -2268,7 +4983,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2280,8 +4995,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 int rowcount = 0;
                 rowcount = sheet.UsedRange.Rows.Count;
                 Range lastrow = xlapp.Cells[rowcount, column];
@@ -2291,7 +5026,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2303,14 +5038,33 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 workbook.Close(true);
                 return "Workbook found";
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2322,14 +5076,33 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 workbook.Close(false);
                 return "Workbook found";
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2339,6 +5112,7 @@ namespace ExcelDataManipulation
             try
             {
                 Application xlapp = (Application)Marshal.GetActiveObject("Excel.Application");
+                xlapp.Visible = true;
                 xlapp.DisplayAlerts = false;
 
                 xlapp.Quit();
@@ -2346,7 +5120,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2355,18 +5129,23 @@ namespace ExcelDataManipulation
         {
             try
             {
-                Excel.Application xlapp = new Application();
+                //Excel.Application xlapp = new Application();
+                Excel.Application xlapp = null;
+
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                }
+                catch (Exception)
+                {
+                    xlapp = new Application();
+                }
+                xlapp.Visible = true;
+
                 xlapp.DisplayAlerts = false;
 
                 Workbook newWorkbook = xlapp.Application.Workbooks.Add();
-                if (visible == "yes" || visible == "Yes" || visible == "YES")
-                {
-                    xlapp.Visible = true;
-                }
-                else
-                {
-                    xlapp.Visible = false;
-                }
+
                 newWorkbook.SaveAs(workbookname);
                 newWorkbook.Close();
                 return "Workbook created";
@@ -2375,7 +5154,7 @@ namespace ExcelDataManipulation
             catch (Exception e)
             {
 
-                return e.ToString();
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
             }
         }
         #endregion
@@ -2387,8 +5166,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 //Workbook workbook = xlapp.Workbooks.get_Item(workbookname);
 
                 List<string> returnlist = new List<string> { };
@@ -2423,7 +5221,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 return exc;
             }
         }
@@ -2436,8 +5234,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
 
                 List<string> returnlist = new List<string> { };
 
@@ -2471,7 +5288,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 return exc;
             }
         }
@@ -2484,8 +5301,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue = null;
                 string celladress = null;
                 List<string> returnlist = new List<string> { };
@@ -2512,7 +5348,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2526,8 +5362,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -2562,7 +5417,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2576,8 +5431,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue = null;
 
                 List<string> returnlist = new List<string> { };
@@ -2605,7 +5479,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2619,8 +5493,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue = null;
 
                 List<string> returnlist = new List<string> { };
@@ -2639,7 +5532,221 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL ROWS IN 1 COLUMN AND SET TEXT BASED ON CONDITION
+        public string LoopThroughRowsAndInsertData(string workbookname, string visible, int searchcolumn1, int searchcolumn2, int startrow, int endrow, string searchvalue1, string searchvalue2, string insertdata, int insertdatacolumn)
+        {
+            try
+            {
+
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                string cellvalue1 = null;
+                string cellvalue2 = null;
+
+                do
+                {
+                    cellvalue1 = sheet.Cells[startrow, searchcolumn1].text;
+                    cellvalue2 = sheet.Cells[startrow, searchcolumn2].text;
+                    if (searchvalue1 != "")
+                    {
+
+                        if (cellvalue1.Contains(searchvalue1))
+                        {
+                            if (searchvalue2 != "")
+                            {
+                                if (cellvalue2.Contains(searchvalue2))
+                                {
+                                    sheet.Cells[startrow, insertdatacolumn] = insertdata;
+                                }
+                            }
+                            else
+                            {
+                                sheet.Cells[startrow, insertdatacolumn] = insertdata;
+                            }
+
+                        }
+
+
+                    }
+                    else
+                    {
+                        sheet.Cells[startrow, insertdatacolumn] = insertdata;
+                    }
+
+
+                    ++startrow;
+
+                } while (startrow <= endrow);
+
+
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL ROWS IN 1 COLUMN AND CHANGE FILL COLOR
+        public string LoopThroughRowsAndChangeFillColor(string workbookname, string visible, int searchcolumn1, int searchcolumn2, int startrow, int endrow, string searchvalue1, string searchvalue2, string color, int colorcolumn, string insertdata, int insertdatacolumn)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                string cellvalue1 = null;
+                string cellvalue2 = null;
+
+                do
+                {
+                    cellvalue1 = sheet.Cells[startrow, searchcolumn1].text;
+                    cellvalue2 = sheet.Cells[startrow, searchcolumn2].text;
+                    if (searchvalue1 != "")
+                    {
+
+                        if (cellvalue1.Contains(searchvalue1))
+                        {
+                            if (searchvalue2 != "")
+                            {
+                                if (cellvalue2.Contains(searchvalue2))
+                                {
+                                    sheet.Cells[startrow, insertdatacolumn] = insertdata;
+                                    Excel.Range range = xlapp.Cells[startrow, colorcolumn];
+                                    range.Font.Color = System.Drawing.ColorTranslator.FromHtml(color);
+                                }
+                            }
+                            else
+                            {
+                                sheet.Cells[startrow, insertdatacolumn] = insertdata;
+                                Excel.Range range = xlapp.Cells[startrow, colorcolumn];
+                                range.Font.Color = System.Drawing.ColorTranslator.FromHtml(color);
+                            }
+
+                        }
+
+
+                    }
+                    else
+                    {
+                        sheet.Cells[startrow, insertdatacolumn] = insertdata;
+                        Excel.Range range = xlapp.Cells[startrow, colorcolumn];
+                        range.Font.Color = System.Drawing.ColorTranslator.FromHtml(color);
+                    }
+
+
+                    ++startrow;
+
+                } while (startrow <= endrow);
+
+
+                return "Workbook found";
+
+            }
+            catch (Exception e)
+            {
+                return "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL ROWS IN 1 ROW AND GET ALL VALUES
+        public List<string> LoopThroughRowsOfSpecificRange(string workbookname, string visible, int loopcolumn, int startrow, int endrow)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                string cellvalue = null;
+
+                List<string> returnlist = new List<string> { };
+
+                do
+                {
+                    cellvalue = sheet.Cells[startrow, loopcolumn].text;
+                    returnlist.Add(cellvalue);
+
+                    ++startrow;
+
+                } while (startrow <= endrow);
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2653,8 +5760,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue = null;
 
                 List<string> returnlist = new List<string> { };
@@ -2683,7 +5809,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2697,8 +5823,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -2741,7 +5886,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2755,8 +5900,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -2807,7 +5971,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2821,8 +5985,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue = null;
                 string celladress = null;
                 List<string> returnlist = new List<string> { };
@@ -2849,7 +6032,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2863,8 +6046,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -2899,7 +6101,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2913,8 +6115,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue1 = null;
                 string cellvalue2 = null;
                 string cellvalue3 = null;
@@ -2944,7 +6165,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2958,8 +6179,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue1 = null;
                 List<string> returnlist = new List<string> { };
 
@@ -2977,7 +6217,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -2991,8 +6231,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -3035,7 +6295,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -3049,8 +6309,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 string cellvalue1 = null;
                 string celladress1 = null;
                 string cellvalue2 = null;
@@ -3101,7 +6381,7 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -3115,8 +6395,27 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
                 string cellvalue = null;
                 long lastrow;
                 long lastcolumn;
@@ -3159,7 +6458,60 @@ namespace ExcelDataManipulation
             }
             catch (Exception e)
             {
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
+                List<string> returnlist = new List<string> { exc };
+                return returnlist;
+            }
+        }
+        #endregion
+        #region LOOP THROUGH ALL COLUMNS IN 1 ROW AND GET ALL VALUES
+        public List<string> InsertColumnIntoArray(string workbookname, string visible, int looprow, int startcolumn)
+        {
+            try
+            {
+                Workbook workbook = null;
+                Application xlapp = null;
+                Worksheet sheet = null;
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+                string cellvalue = null;
+
+                List<string> returnlist = new List<string> { };
+
+                while (sheet.Cells[looprow, startcolumn].value != null || sheet.Cells[looprow, startcolumn + 1].value != null || sheet.Cells[looprow, startcolumn + 2].value != null)
+                {
+                    cellvalue = sheet.Cells[looprow, startcolumn].text;
+                    returnlist.Add(cellvalue);
+
+                    ++startcolumn;
+                }
+
+
+                return returnlist;
+
+            }
+            catch (Exception e)
+            {
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 List<string> returnlist = new List<string> { exc };
                 return returnlist;
             }
@@ -3177,8 +6529,28 @@ namespace ExcelDataManipulation
                 Workbook workbook = null;
                 Application xlapp = null;
                 Worksheet sheet = null;
-                ExcelInstance instance = new ExcelInstance();
-                instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                try
+                {
+                    xlapp = (Excel.Application)System.Runtime.InteropServices.Marshal.GetActiveObject("Excel.Application");
+                    xlapp.Visible = true;
+                    workbook = xlapp.Workbooks.get_Item(workbookname);
+                    sheet = (Excel.Worksheet)workbook.ActiveSheet;
+                }
+                catch (Exception)
+                {
+
+                    workbook = null;
+                    xlapp = null;
+                    sheet = null;
+                    ExcelInstance instance = new ExcelInstance();
+                    instance.Instance(workbookname, visible, out workbook, out xlapp, out sheet);
+                }
+                xlapp.Visible = true;
+                xlapp.DisplayAlerts = false;
+                xlapp.EnableEvents = false;
+                workbook.Activate();
+                sheet.Activate();
+
                 string worksheetname = "Not found";
                 int? rowcount = 0;
                 int? columncount = 0;
@@ -3211,7 +6583,7 @@ namespace ExcelDataManipulation
                 int? value = null;
                 int? value2 = null;
                 int? value3 = null;
-                string exc = e.ToString();
+                string exc = "<#EXCEL INTEGRATION MBOT FAILED#> " + e.ToString();
                 return Tuple.Create(value, value2,exc, value3);
             }
         }

@@ -7,8 +7,6 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Program", "ExcelMBOT\Progra
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExcelMBOT", "ClassLibrary1\ExcelMBOT.csproj", "{7C4E19AD-688A-49C9-A210-302604978FDA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConsoleApp1", "ConsoleApp1\ConsoleApp1.csproj", "{22C22776-6D16-43E2-81BD-F097A5F57EF7}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -23,10 +21,6 @@ Global
 		{7C4E19AD-688A-49C9-A210-302604978FDA}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7C4E19AD-688A-49C9-A210-302604978FDA}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7C4E19AD-688A-49C9-A210-302604978FDA}.Release|Any CPU.Build.0 = Release|Any CPU
-		{22C22776-6D16-43E2-81BD-F097A5F57EF7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{22C22776-6D16-43E2-81BD-F097A5F57EF7}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{22C22776-6D16-43E2-81BD-F097A5F57EF7}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{22C22776-6D16-43E2-81BD-F097A5F57EF7}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
